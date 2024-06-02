@@ -14,7 +14,7 @@ The **Report Generative Security Tool (RGS)** is an innovative project developed
 [![Flask](https://img.shields.io/badge/Flask-1.1.2-red.svg)](https://flask.palletsprojects.com/en/1.1.x/)
 ![NVIDIA RTX](https://img.shields.io/badge/NVIDIA-RTX-green.svg)
 ![LangChain](https://img.shields.io/badge/LangChain-yellow.svg)
-![Mistral](https://img.shields.io/badge/Mistral-blue.svg)
+![Mistral 7B](https://img.shields.io/badge/Mistral-blue.svg)
 <div align="center">
     <img src="./static/RGSH.png" alt="RGS Logo" width="700" />
 </div>
