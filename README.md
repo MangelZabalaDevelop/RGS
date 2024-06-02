@@ -4,10 +4,6 @@
     <img src="static/LOGO_C.png" alt="RGS Logo" width="200" />
 </div>
 
-
-The **Report Generative Security Tool (RGS)** is an innovative application developed to streamline the process of generating comprehensive security audit reports. Utilizing the power of Generative AI, RGS simplifies the reporting process, providing detailed analyses and actionable recommendations for identified vulnerabilities. This tool was developed for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/).
-
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![Flask](https://img.shields.io/badge/Flask-1.1.2-red.svg)](https://flask.palletsprojects.com/en/1.1.x/)
@@ -15,13 +11,39 @@ The **Report Generative Security Tool (RGS)** is an innovative application devel
 ![LangChain](https://img.shields.io/badge/LangChain-yellow.svg)
 ![Mistral](https://img.shields.io/badge/Mistral-blue.svg)
 
-## Table of Contents
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
+## Problem
+
+In the rapidly evolving field of cybersecurity, generating vulnerability reports is a critical yet time-consuming task. Consultants often spend hours documenting vulnerabilities, which reduces the time available for identifying and addressing new threats. This inefficiency hampers productivity and risks the quality and consistency of the reports.
+
+## Solution
+
+<table>
+<tr>
+<td>
+
+Introducing the **Report Generative Security Tool (RGS)**, a groundbreaking application that revolutionizes vulnerability report generation by leveraging NVIDIA's GeForce RTX 3000 series GPUs. Our solution uses advanced tensor LLM to optimize inference, delivering highly accurate and detailed reports in record time.
+
+### Key Benefits of RGS:
+
+- **Harnessing NVIDIA Technology**: Utilizes the power of NVIDIA's CUDA cores for unparalleled efficiency and speed.
+- **AI-Powered Precision**: Ensures high-quality, consistent, and accurate reports.
+- **Real-World Impact**: Frees consultants to focus on proactive threat detection and mitigation, enhancing overall security.
+
+RGS is not just a technological advancement; it's a real-world solution that strengthens the cybersecurity landscape. By embracing NVIDIA's powerful hardware, we pave the way for more efficient and impactful security practices.
+
+**Experience the future of cybersecurity with RGS—one report at a time.**
+
+</td>
+<td>
+
+<video width="400" controls>
+  <source src="static/RGS.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+</td>
+</tr>
+</table>
 
 ## Features
 
