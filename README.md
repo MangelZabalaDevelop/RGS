@@ -39,6 +39,10 @@ RGS is not just a technological advancement; it's a real-world solution that str
 
 **Experience the future of cybersecurity with RGS—one report at a time.**
 
+<div align="center">
+    <img src="./static/RGSE.png" alt="RGS E" width="700" />
+</div>
+
 ## FEATURES
 
 - **Generative AI Integration**: Leverages [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/) via API [ChatRTX](https://github.com/NVIDIA/ChatRTX) and the Mistral 7B model to generate comprehensive vulnerability reports.
@@ -47,9 +51,7 @@ RGS is not just a technological advancement; it's a real-world solution that str
 - **Database Management**: Efficiently manage vulnerabilities and reports with SQLite.
 - **User-Friendly Interface**: Intuitive web interface for managing and generating reports.
 
-<div align="center">
-    <img src="./static/RGSE.png" alt="RGS E" width="700" />
-</div>
+
 
 ## INSTALATION
 
