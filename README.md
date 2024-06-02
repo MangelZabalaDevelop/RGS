@@ -1,6 +1,8 @@
 # Report Generative Security Tool (RGS)
 
-<img src="static/LOGO_C.png" alt="RGS Logo" width="200" />
+<div align="center">
+    <img src="static/LOGO_C.png" alt="RGS Logo" width="200" />
+</div>
 
 The **Report Generative Security Tool (RGS)** is an innovative application developed to streamline the process of generating comprehensive security audit reports. Utilizing the power of Generative AI, RGS simplifies the reporting process, providing detailed analyses and actionable recommendations for identified vulnerabilities. This tool was developed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain.
 
