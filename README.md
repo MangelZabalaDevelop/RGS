@@ -5,7 +5,7 @@
 </div>
 
 
-## About
+## ABOUT
 
 The **Report Generative Security Tool (RGS)** is an innovative project developed for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). This project leverages advanced technologies such as TensorRT-LLM via API [ChatRTX](https://github.com/NVIDIA/ChatRTX) using Mistral 7B model to automate and optimize the generation of comprehensive security audit reports.
 
@@ -19,17 +19,17 @@ The **Report Generative Security Tool (RGS)** is an innovative project developed
     <img src="./static/RGSH.png" alt="RGS Logo" width="700" />
 </div>
 
-## Problem
+## PROBLEM
 
 In the rapidly evolving field of cybersecurity, generating vulnerability reports is a critical yet time-consuming task. Consultants often spend hours documenting vulnerabilities, which reduces the time available for identifying and addressing new threats. This inefficiency hampers productivity and risks the quality and consistency of the reports.
 
-## Solution
+## SOLUTION
 
 Introducing the **Report Generative Security Tool (RGS)**, a groundbreaking application that revolutionizes vulnerability report generation by leveraging NVIDIA's GeForce RTX 3xxx and RTX 4xxx series GPUs. Our solution uses advanced tensor LLM to optimize inference, delivering highly accurate and detailed reports in record time.
 
 ![RGS Tool in Action](./static/RGS1.gif)
 
-### Key Benefits of RGS:
+### KEY BENEFITS:
 
 - **Harnessing NVIDIA Technology**: Utilizes the power of NVIDIA's CUDA cores for unparalleled efficiency and speed.
 - **AI-Powered Precision**: Ensures high-quality, consistent, and accurate reports.
@@ -39,7 +39,7 @@ RGS is not just a technological advancement; it's a real-world solution that str
 
 **Experience the future of cybersecurity with RGS—one report at a time.**
 
-## Features
+## FEATURES
 
 - **Generative AI Integration**: Leverages TensorRT-LLM via Chat With RTX and the Mistral 7B model to generate comprehensive vulnerability reports.
 - **Risk, Priority, and Complexity Analysis**: Visual charts to illustrate vulnerability distributions.
@@ -47,7 +47,7 @@ RGS is not just a technological advancement; it's a real-world solution that str
 - **Database Management**: Efficiently manage vulnerabilities and reports with SQLite.
 - **User-Friendly Interface**: Intuitive web interface for managing and generating reports.
 
-## Installation
+## INSTALATION
 
 To get started with RGS, follow these steps:
 
@@ -73,7 +73,7 @@ To get started with RGS, follow these steps:
     python app.py
     ```
 
-## Usage
+## USAGE
 
 1. **Run the application**:
     ```bash
