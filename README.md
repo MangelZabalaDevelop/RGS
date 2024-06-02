@@ -25,7 +25,7 @@ In the rapidly evolving field of cybersecurity, generating vulnerability reports
 
 ## SOLUTION
 
-Introducing the **Report Generative Security Tool (RGS)**, a groundbreaking application that revolutionizes vulnerability report generation by leveraging NVIDIA's GeForce RTX 3xxx and RTX 4xxx series GPUs. Our solution uses advanced tensor LLM to optimize inference, delivering highly accurate and detailed reports in record time.
+Introducing the **Report Generative Security Tool (RGS)**, a groundbreaking application that revolutionizes vulnerability reporting by leveraging the power of NVIDIA's GeForce RTX 3xxx and RTX 4xxx series GPUs. Our solution uses advanced tensor LLM to optimize inference, delivering highly accurate and detailed reports in record time.
 
 ![RGS Tool in Action](./static/RGS1.gif)
 
