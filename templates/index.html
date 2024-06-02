@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGS Tool</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-none d-md-block sidebar">
+                <div class="sidebar-sticky">
+                    <div class="text-center">
+                        <img src="/static/LOGO_C.png" alt="LangChain Logo" style="height: 100px; margin-right: 50px;">
+                    </div>
+                    <br>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/">
+                                <i class="fas fa-file-alt"></i>
+                                Create Report (Generative AI)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                          
+                                
+                            </a>    
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                            
+                        <div class="text-center">
+                            <img src="/static/nvidia.png" alt="LangChain Logo" style="height: 60px; margin-right: 20px;">
+                            <br>
+                            <br>
+                            <img src="/static/langchain.png" alt="NVIDIA Logo" style="height: 30px;">
+                            <br>
+                            <br>
+                        </div>
+                            
+                       
+                    </ul>
+                </div>
+            </nav>
+            <footer class="text-center mt-4"></footer>
+
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2"> <strong>Report Generative Security Tool</strong></h1>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header">
+                                <h4><strong>New Report</strong></h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-5">
+                                        <label for="client">Company:</label>
+                                        <input type="text" class="form-control" id="client" placeholder="Company Name">
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label for="audit-date">Audit Date:</label>
+                                        <input type="date" class="form-control" id="audit-date">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label for="num-vulns">Number of Vulnerabilities</label>
+                                        <input type="number" class="form-control" id="num-vulns" min="1" placeholder="Number of vulnerabilities" pattern="[0-9]*" inputmode="numeric">
+                                    </div>
+                                </div>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-12">
+                                            <button class="btn btn-block" onclick="generateVulnFields()">Generate Fields</button>
+                                        </div>
+                                    </div>
+                               
+                                
+
+                                
+                            </div>
+                        </div>
+
+                        <div id="vuln-modals"></div>
+
+                        <div class="d-flex justify-content-between mt-4" id="action-buttons" style="display:none;">
+                            <button id="submit-all" class="btn btn-success " onclick="submitAllVulns()">Send Vulnerabilities</button>
+                            <button id="generate-report" class="btn btn-success" onclick="generateReport()">Generate Report</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header">
+                                <h4><strong>Vulnerabilities Registered</strong></h4>
+                            </div>
+                            <div class="card-body">
+                                <table id="vulnerabilities-table" class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Risk</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vuln-list">
+                                        <!-- Vulnerabilities will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="response" class="mt-4"></div>
+                <div id="loading" class="text-center" style="display: none;">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p>Generating report, please wait...</p>
+                </div>
+
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header">
+                        <h4><strong>Generated Reports</strong></h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="alert-container"></div>
+                        <table id="reports-table" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Client</th>
+                                    <th>Number of Vulnerabilities</th>
+                                    <th>Generation Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reports-list">
+                                <!-- Reports will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <footer class="text-center mt-4">
+                
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <div id="modal-container" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><strong>Vulnerability</strong></h5>
+                    <button type="button" class="close" onclick="closeModal()">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="vuln-form">
+                        <div id="vuln-fields"></div>
+                        <button type="button" class="btn btn-block " onclick="saveVuln()">Save Vulnerability</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-modal-container" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Vulnerability</h5>
+                    <button type="button" class="close" onclick="closeViewModal()">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="view-vuln-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+    <script src="/static/script.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        feather.replace();
+        document.addEventListener("DOMContentLoaded", function() {
+            listReports();
+            listVulnerabilities();
+        });
+    </script>
+</body>
+</html>

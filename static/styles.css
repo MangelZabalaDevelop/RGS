@@ -1,0 +1,182 @@
+body {
+    background-color: #000000;  /* Negro */
+    color: #ffffff;  /* Blanco */
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.container-fluid {
+    flex: 1;
+}
+
+.sidebar {
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    padding-top: 20px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background-color: #1a1a1a;  /* Negro oscuro */
+}
+
+.sidebar-sticky {
+    position: relative;
+    top: 0;
+    height: calc(100vh - 48px);
+    padding-top: 0.5rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.sidebar-heading {
+    padding: 10px 15px;
+    font-size: 1.5rem;
+    text-align: center;
+    font-weight: bold;
+    color: #76b900;  /* Verde NVIDIA */
+    background-color: #1a1a1a;  /* Negro oscuro */
+}
+
+.sidebar .nav-link {
+    font-weight: 500;
+    color: #ffffff;  /* Blanco */
+    padding: 10px;
+    transition: all 0.2s;
+}
+
+.sidebar .nav-link.active {
+    color: #76b900;  /* Verde NVIDIA */
+    background-color: #333333;  /* Gris oscuro */
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    color: #76b900;  /* Verde NVIDIA */
+    background-color: #333333;  /* Gris oscuro */
+}
+
+.card {
+    margin-bottom: 20px;
+    background-color: #1a1a1a;  /* Negro oscuro */
+    color: #ffffff;  /* Blanco */
+}
+
+.card-header {
+    font-size: 1.25rem;
+    background-color: #3d3f3d;  /* Verde NVIDIA */
+    color: #ffffff;  /* Blanco */
+}
+
+.btn-block {
+    width: 100%;
+    background-color: #4f504e;  /* Verde NVIDIA */
+    color: #ffffff;  /* Blanco */
+}
+
+.btn-block-red {
+    width: 100%;
+    background-color: #ea0804;  /* Verde NVIDIA */
+    color: #ffffff;  /* Blanco */
+}
+
+.btn-block-gray {
+    width: 100%;
+    background-color: #282925;  /* Verde NVIDIA */
+    color: #ffffff;  /* Blanco */
+}
+
+#action-buttons {
+    margin-top: 20px;
+}
+
+#response {
+    margin-top: 20px;
+}
+
+#loading {
+    margin-top: 20px;
+    font-size: 1.2rem;
+    color: #76b900;  /* Verde NVIDIA */
+}
+
+table {
+    width: 100%;
+    border: 0px solid #ec0707;  /* Blanco más oscuro */
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 0px solid #ec0707;  /* Blanco más oscuro */
+    padding: 8px;
+    text-align: left;
+    color: #ffffff;  /* Blanco */
+    background-color: #333333;  /* Gris oscuro */
+}
+
+th {
+    border: 0px solid #ec0707;  /* Blanco más oscuro */
+    background-color: #333333;  /* Gris oscuro */
+}
+
+tr:nth-child(even) {
+    border: 0px solid #ec0707;  /* Blanco más oscuro */
+    background-color: #4d4d4d;  /* Gris oscuro intermedio */
+}
+
+tr:hover {
+    border: 0px solid #ec0707;  /* Blanco más oscuro */
+    background-color: #666666;  /* Gris más claro para hover */
+}
+
+.footer {
+    border: 0px solid #ec0707;  /* Blanco más oscuro */
+    text-align: center;
+    background-color: #1a1a1a;  /* Negro oscuro */
+    padding: 10px 0;
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+}
+
+label, input, select, button {
+    color: #ffffff;  /* Blanco */
+}
+
+input::placeholder {
+    color: #76b900;  /* Verde NVIDIA */
+}
+
+/* Modal styles */
+.modal-content {
+    background-color: #1a1a1a;  /* Negro oscuro */
+    color: #ffffff;  /* Blanco */
+}
+
+.modal-header {
+    border-bottom: 1px solid #3a3a3a;  /* Gris oscuro */
+    background-color: #3d3f3d;
+}
+
+.modal-header .close {
+    color: #ffffff;  /* Blanco */
+}
+
+.modal-body {
+    background-color: #1a1a1a;  /* Negro oscuro */
+}
+
+.modal-footer {
+    border-top: 1px solid #3a3a3a;  /* Gris oscuro */
+}
+
+.modal-footer .btn {
+    background-color: #76b900;  /* Verde NVIDIA */
+    color: #ffffff;  /* Blanco */
+}
