@@ -4,6 +4,10 @@
     <img src="static/LOGO_C.png" alt="RGS Logo" width="200" />
 </div>
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![Flask](https://img.shields.io/badge/Flask-1.1.2-red.svg)](https://flask.palletsprojects.com/en/1.1.x/)
+
 The **Report Generative Security Tool (RGS)** is an innovative application developed to streamline the process of generating comprehensive security audit reports. Utilizing the power of Generative AI, RGS simplifies the reporting process, providing detailed analyses and actionable recommendations for identified vulnerabilities. This tool was developed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain.
 
 ## Table of Contents
@@ -20,6 +24,7 @@ The **Report Generative Security Tool (RGS)** is an innovative application devel
 - **Risk, Priority, and Complexity Analysis**: Visual charts to illustrate vulnerability distributions.
 - **Automatic Report Generation**: Easily create professional-grade security audit reports.
 - **Database Management**: Efficiently manage vulnerabilities and reports with SQLite.
+- **User-Friendly Interface**: Intuitive web interface for managing and generating reports.
 
 ## Installation
 
