@@ -5,6 +5,7 @@
 </div>
 
 
+
 The **Report Generative Security Tool (RGS)** is an innovative application developed to streamline the process of generating comprehensive security audit reports. Utilizing the power of Generative AI, RGS simplifies the reporting process, providing detailed analyses and actionable recommendations for identified vulnerabilities. This tool was developed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
@@ -24,7 +25,7 @@ The **Report Generative Security Tool (RGS)** is an innovative application devel
 
 ## Features
 
-- **Generative AI Integration**: Leverages AI to generate comprehensive vulnerability reports.
+- **Generative AI Integration**: Leverages TensorRT-LLM via Chat With RTX to generate comprehensive vulnerability reports.
 - **Risk, Priority, and Complexity Analysis**: Visual charts to illustrate vulnerability distributions.
 - **Automatic Report Generation**: Easily create professional-grade security audit reports.
 - **Database Management**: Efficiently manage vulnerabilities and reports with SQLite.
@@ -45,7 +46,10 @@ To get started with RGS, follow these steps:
     pip install -r requirements.txt
     ```
 
-3. **Initialize the database**:
+3. **Setup Chat With RTX**:
+    Follow the instructions on the [Chat With RTX GitHub repository](https://github.com/NVIDIA/ChatRTX) to set up TensorRT-LLM and the Chat With RTX application.
+
+4. **Initialize the database**:
     ```bash
     python app.py
     ```
