@@ -50,6 +50,7 @@ RGS is not just a technological advancement; it's a real-world solution that str
 <div align="center">
     <img src="./static/RGSE.png" alt="RGS E" width="700" />
 </div>
+
 ## INSTALATION
 
 To get started with RGS, follow these steps:
