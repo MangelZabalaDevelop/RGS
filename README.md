@@ -1,7 +1,7 @@
 # Report Generative Security Tool (RGS)
 
 <div align="center">
-    <img src="./LOGO_C.png" alt="RGS Logo" width="200" />
+    <img src="static/LOGO_C.png" alt="RGS Logo" width="200" />
 </div>
 
 
