@@ -94,5 +94,23 @@ To get started with RGS, follow these steps:
     - Click on "Generate Fields" to input vulnerability details.
     - Submit vulnerabilities and generate the report.
 
-## Project Structure
+
+## Contributing
+
+We welcome contributions to improve the RGS Tool. Please follow these steps to contribute:
+
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Commit your changes (`git commit -am 'Add new feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Create a new Pull Request.
+
+## License
+
+This project is open-source and licensed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain. See the [LICENSE](LICENSE) file for details.
+
+---
+
+Developed by Miguel Zabala (Nullsector) for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). RGS leverages open-source software to make it easier to produce professional-grade security reports with minimal effort.
+
 
