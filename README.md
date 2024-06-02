@@ -4,16 +4,17 @@
     <img src="./static/LOGO_C.png" alt="RGS Logo" width="150" />
 </div>
 
+
+## About
+
+The **Report Generative Security Tool (RGS)** is an innovative application developed for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). This project leverages advanced technologies such as TensorRT-LLM via Chat With RTX and the Mistral 7B model to automate and optimize the generation of comprehensive security audit reports.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![Flask](https://img.shields.io/badge/Flask-1.1.2-red.svg)](https://flask.palletsprojects.com/en/1.1.x/)
 ![NVIDIA RTX](https://img.shields.io/badge/NVIDIA-RTX-green.svg)
 ![LangChain](https://img.shields.io/badge/LangChain-yellow.svg)
 ![Mistral](https://img.shields.io/badge/Mistral-blue.svg)
-
-## About
-
-The **Report Generative Security Tool (RGS)** is an innovative application developed for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). This project leverages advanced technologies such as TensorRT-LLM via Chat With RTX and the Mistral 7B model to automate and optimize the generation of comprehensive security audit reports.
 <div align="center">
     <img src="./static/RGSH.png" alt="RGS Logo" width="700" />
 </div>
