@@ -15,8 +15,9 @@
 
 The **Report Generative Security Tool (RGS)** is an innovative application developed for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). This project leverages advanced technologies such as TensorRT-LLM via Chat With RTX and the Mistral 7B model to automate and optimize the generation of comprehensive security audit reports.
 <div align="center">
-    <img src="./static/RGSH.png" alt="RGS Logo" width="600" />
+    <img src="./static/RGSH.png" alt="RGS Logo" width="700" />
 </div>
+
 ## Problem
 
 In the rapidly evolving field of cybersecurity, generating vulnerability reports is a critical yet time-consuming task. Consultants often spend hours documenting vulnerabilities, which reduces the time available for identifying and addressing new threats. This inefficiency hampers productivity and risks the quality and consistency of the reports.
