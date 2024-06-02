@@ -47,6 +47,9 @@ RGS is not just a technological advancement; it's a real-world solution that str
 - **Database Management**: Efficiently manage vulnerabilities and reports with SQLite.
 - **User-Friendly Interface**: Intuitive web interface for managing and generating reports.
 
+<div align="center">
+    <img src="./static/RGSE.png" alt="RGS E" width="700" />
+</div>
 ## INSTALATION
 
 To get started with RGS, follow these steps:
