@@ -1,7 +1,7 @@
 # Report Generative Security Tool (RGS)
 
 <div align="center">
-    <img src="./static/LOGO_C.png" alt="RGS Logo" width="200" />
+    <img src="./static/LOGO_C.png" alt="RGS Logo" width="150" />
 </div>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
