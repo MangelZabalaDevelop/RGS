@@ -41,7 +41,7 @@ RGS is not just a technological advancement; it's a real-world solution that str
 
 ## FEATURES
 
-- **Generative AI Integration**: Leverages TensorRT-LLM via Chat With RTX and the Mistral 7B model to generate comprehensive vulnerability reports.
+- **Generative AI Integration**: Leverages [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/) via API [ChatRTX](https://github.com/NVIDIA/ChatRTX) and the Mistral 7B model to generate comprehensive vulnerability reports.
 - **Risk, Priority, and Complexity Analysis**: Visual charts to illustrate vulnerability distributions.
 - **Automatic Report Generation**: Easily create professional-grade security audit reports.
 - **Database Management**: Efficiently manage vulnerabilities and reports with SQLite.
