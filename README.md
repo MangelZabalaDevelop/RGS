@@ -60,6 +60,7 @@ The RGS tool demonstrates exceptional performance and efficiency in real-world s
 ![RGS Benchmark](./static/benchmark.gif)
 
 </div>
+
 ## INSTALATION
 
 To get started with RGS, follow these steps:
