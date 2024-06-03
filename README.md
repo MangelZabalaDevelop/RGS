@@ -78,6 +78,23 @@ The RGS tool demonstrates exceptional performance and efficiency in real-world s
 
 </div>
 
+## USER-FRIENDLY INTERFACE
+
+The **Report Generative Security Tool (RGS)** features a simple and easy-to-use graphical interface that allows users to:
+
+- **Utilize Templates**: Access previously reported vulnerability templates for faster report generation.
+- **Create New Entries**: Add new vulnerabilities with ease.
+- **Modify Existing Entries**: Update and refine existing vulnerability details.
+- **Delete Entries**: Remove outdated or irrelevant vulnerabilities.
+
+This intuitive interface ensures that users can optimize their time by focusing on identifying critical vulnerabilities, thereby providing more value to clients and generating more precise and concise reports with the help of AI.
+
+<div align="center">
+    
+![RGS Benchmark](./static/UI.gif)
+
+</div>
+
 ## INSTALATION
 
 To get started with RGS, follow these steps:
