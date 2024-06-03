@@ -118,6 +118,9 @@ To get started with RGS, follow these steps:
     ```bash
     python app.py
     ```
+<div align="center">
+    <img src="./static/1.png" alt="RGS Logo" width="700" />
+</div>
 
 2. **Access the application**:
     Open your web browser and navigate to `http://127.0.0.1:5000/`.
