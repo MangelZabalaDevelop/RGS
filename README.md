@@ -76,6 +76,9 @@ The RGS tool demonstrates exceptional performance and efficiency in real-world s
 
 </div>
 
+For a detailed benchmark, watch our [YouTube video](https://youtu.be/jU9_fqLk5P4) demonstrating the RGS tool power in action.
+
+
 ## USER-FRIENDLY INTERFACE
 
 The **Report Generative Security Tool (RGS)** features a simple and easy-to-use graphical interface that allows users to:
