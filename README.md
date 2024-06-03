@@ -68,7 +68,7 @@ The **Report Generative Security Tool (RGS)** addresses these concerns by ensuri
 
 </div>
 
-## How Fast Is It? It's Ultra Fast 🚀
+## Blazing Fast with RTX Speed 🚀
 
 The RGS tool demonstrates exceptional performance and efficiency in real-world scenarios. In our benchmarks, RGS generated 4749 words across 21 pages in less than a minute and a half, showcasing its ultra-fast processing capabilities. This speed and efficiency make RGS a powerful tool for consultants and security professionals who need to quickly generate comprehensive and accurate vulnerability reports.
 
