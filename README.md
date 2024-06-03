@@ -19,7 +19,7 @@ The **Report Generative Security Tool (RGS)** is an innovative project developed
     <img src="./static/RGSH.png" alt="RGS Logo" width="700" />
 </div>
 
-## PROBLEM
+## TACKLING CYBERSECURITY CHALLENGES WITH CUTTING-EDGE SOLUTIONS
 
 In the rapidly evolving field of cybersecurity, generating vulnerability reports is a critical yet time-consuming task. Consultants often spend hours documenting vulnerabilities, which reduces the time available for identifying and addressing new threats. This inefficiency hampers productivity and risks the quality and consistency of the reports.
 
