@@ -111,13 +111,6 @@ To get started with RGS, follow these steps:
 3. **Setup Chat With RTX**:
     Follow the instructions on the [Chat With RTX GitHub repository](https://github.com/NVIDIA/ChatRTX) to set up TensorRT-LLM and the Chat With RTX application.
 
-4. **Download and setup Mistral 7B model**:
-    Follow the instructions on the [Mistral AI official page](https://www.mistralai.com) to download and set up the Mistral 7B model.
-
-5. **Initialize the database**:
-    ```bash
-    python app.py
-    ```
 
 ## USAGE
 
