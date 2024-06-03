@@ -152,8 +152,6 @@ For a detailed walkthrough, watch our [YouTube video](https://youtu.be/WYZV3hdq4
 
 This project is open-source and licensed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain.
 
----
-
 Developed by Miguel Zabala (Nullsector) for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). RGS leverages open-source software to make it easier to produce professional-grade security reports with minimal effort.
 
 
