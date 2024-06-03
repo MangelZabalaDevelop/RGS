@@ -125,7 +125,11 @@ To get started with RGS, follow these steps:
 2. **Access the application**:
     Open your web browser and navigate to `http://127.0.0.1:5000/`.
 
-3. **Generate Reports**:
+   <div align="center">
+    <img src="./static/UI.png" alt="RGS UI" width="700" />
+</div>
+
+4. **Generate Reports**:
     - Enter the company name, audit date, and number of vulnerabilities.
     - Click on "Generate Fields" to input vulnerability details.
     - Submit vulnerabilities and generate the report.
