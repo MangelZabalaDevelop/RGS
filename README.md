@@ -93,16 +93,6 @@ This intuitive interface ensures that users can optimize their time by focusing 
 
 </div>
 
-## EXTENDED DEMO
-
-Experience the full potential of the **Report Generative Security Tool (RGS)** through an extended demo. In this section, we showcase the capabilities of RGS with a pseudo real-world example. Watch how RGS generates comprehensive security audit reports efficiently and accurately.
-
-<div align="center">
-    <img src="./static/demo.gif" alt="RGS Extended Demo" width="600">
-</div>
-
-For a detailed walkthrough, watch our [YouTube video](https://youtu.be/WYZV3hdq4yE) demonstrating the RGS tool in action.
-
 ## INSTALATION
 
 To get started with RGS, follow these steps:
@@ -139,25 +129,25 @@ To get started with RGS, follow these steps:
     <img src="./static/UI.png" alt="RGS UI" width="700" />
 </div>
 
-4. **Generate Reports**:
+3. **Generate Reports**:
     - Enter the company name, audit date, and number of vulnerabilities.
     - Click on "Generate Fields" to input vulnerability details.
     - Submit vulnerabilities and generate the report.
+  
+## EXTENDED DEMO
 
+Experience the full potential of the **Report Generative Security Tool (RGS)** through an extended demo. In this section, we showcase the capabilities of RGS with a pseudo real-world example. Watch how RGS generates comprehensive security audit reports efficiently and accurately.
 
-## Contributing
+<div align="center">
+    <img src="./static/demo.gif" alt="RGS Extended Demo" width="600">
+</div>
 
-We welcome contributions to improve the RGS Tool. Please follow these steps to contribute:
+For a detailed walkthrough, watch our [YouTube video](https://youtu.be/WYZV3hdq4yE) demonstrating the RGS tool in action.
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature-branch`).
-3. Commit your changes (`git commit -am 'Add new feature'`).
-4. Push to the branch (`git push origin feature-branch`).
-5. Create a new Pull Request.
 
 ## License
 
-This project is open-source and licensed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain. See the [LICENSE](LICENSE) file for details.
+This project is open-source and licensed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain.
 
 ---
 
