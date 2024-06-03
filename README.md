@@ -93,6 +93,16 @@ This intuitive interface ensures that users can optimize their time by focusing 
 
 </div>
 
+## EXTENDED DEMO
+
+Experience the full potential of the **Report Generative Security Tool (RGS)** through an extended demo. In this section, we showcase the capabilities of RGS with a pseudo real-world example. Watch how RGS generates comprehensive security audit reports efficiently and accurately.
+
+<div align="center">
+    <img src="./static/demo.gif" alt="RGS Extended Demo" width="600">
+</div>
+
+For a detailed walkthrough, watch our [YouTube video](https://youtu.be/WYZV3hdq4yE) demonstrating the RGS tool in action.
+
 ## INSTALATION
 
 To get started with RGS, follow these steps:
