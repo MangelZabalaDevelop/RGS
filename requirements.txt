@@ -3,7 +3,7 @@ python-docx==0.8.11
 matplotlib==3.4.3
 requests==2.26.0
 psutil==5.8.0
-sqlite3
+sqlite
 json
 langchain==0.0.1
 faiss-cpu==1.7.1
