@@ -384,3 +384,44 @@ function populateClientDropdown() {
         });
     });
 }
+
+document.getElementById('chat-send').addEventListener('click', function() {
+    var chatInput = document.getElementById('chat-input').value;
+    if (chatInput.trim() !== "") {
+        // Show loading animation
+        document.getElementById('loading-container').style.display = 'flex';
+
+        fetch('/ask_in_documents', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ question: chatInput })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading animation
+            document.getElementById('loading-container').style.display = 'none';
+
+            if (data.error) {
+                console.error('Error:', data.error);
+            } else {
+                var chatBox = document.getElementById('chat-box');
+                var responseElement = document.createElement('p');
+                responseElement.innerHTML = data.response; // Use innerHTML to render HTML content
+                chatBox.appendChild(responseElement);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        })
+        .catch((error) => {
+            // Hide loading animation
+            document.getElementById('loading-container').style.display = 'none';
+            console.error('Error:', error);
+        });
+    }
+});
+
+document.getElementById('chat-clear').addEventListener('click', function() {
+    var chatBox = document.getElementById('chat-box');
+    chatBox.innerHTML = '';
+});
