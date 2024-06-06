@@ -149,30 +149,61 @@
                     </div>
                     <p>Generating report, please wait...</p>
                 </div>
-
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header">
-                        <h4><strong>Generated Reports</strong></h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header">
+                                <h4><strong>Generated Reports</strong></h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="alert-container"></div>
+                                <table id="reports-table" class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Client</th>
+                                            <th>Number of Vulnerabilities</th>
+                                            <th>Generation Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reports-list">
+                                        <!-- Reports will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>    
+                    <div class="col-md-6">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header">
+                                <h4><strong>RAG Analysis</strong></h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="chat-container">
+                                    <div id="loading-container" class="loading-container" style="display: none;">
+                                        <div class="loading-content">
+                                            <div class="progress">
+                                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                            </div>
+                                            <p>Loading, please wait...</p>
+                                        </div>
+                                    </div>
+                                    <div id="chat-box" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background-color: #1a1a1a; color: #fff;"></div>
+                                    <div class="input-group mt-2">
+                                        <input type="text" id="chat-input" class="form-control" placeholder="Ask something...">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-success" id="chat-send"><i class="fas fa-search"></i></button>
+                                            <button class="btn btn-danger" id="chat-clear"><i class="fas fa-trash-alt"></i></button>
+                                        </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div id="alert-container"></div>
-                        <table id="reports-table" class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Client</th>
-                                    <th>Number of Vulnerabilities</th>
-                                    <th>Generation Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="reports-list">
-                                <!-- Reports will be loaded here -->
-                            </tbody>
-                        </table>
-                    </div>
+                    
                 </div>
-
                 <footer class="text-center mt-4">
                 
                 </footer>
