@@ -14,6 +14,11 @@ import random
 import string
 import psutil
 import json
+from langchain.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.docstore.document import Document as LangchainDocument
+from textwrap import fill
 
 ## CHAT WITH RTX SERVER
 port = 12594
@@ -151,7 +156,6 @@ def add_footer(document, image_path):
     paragraph = footer.paragraphs[0]
     run = paragraph.add_run()
     run.add_picture(image_path, width=Inches(6))
-    
 
 def generate_risk_density_chart(vulnerabilities, output_path):
     risk_levels = ['Critical', 'High', 'Medium', 'Low']
@@ -262,7 +266,6 @@ def index():
 def historical_analysis():
     return render_template('historical_analysis.html')
 
-
 @app.route('/ask', methods=['POST'])
 def ask():
     try:
@@ -300,7 +303,6 @@ def ask():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-
 @app.route('/generate_report', methods=['POST'])
 def generate_report():
     try:
@@ -333,7 +335,6 @@ def generate_report():
         last_paragraph = document.paragraphs[-1]
         last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-
         # Add new section with default margins
         section = document.add_section(WD_SECTION_START.NEW_PAGE)
         section.orientation = WD_ORIENT.PORTRAIT
@@ -341,8 +342,6 @@ def generate_report():
         section.bottom_margin = Inches(1)
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
-
-
 
         # Get the names of the vulnerabilities
         vuln_names = ', '.join([v['name'] for v in vulnerabilities])
@@ -368,7 +367,7 @@ def generate_report():
         document.add_page_break()
 
         # Generate and insert risk density chart
-        add_colored_heading(document, 'RISK ANALISYS', level=1)
+        add_colored_heading(document, 'RISK ANALYSIS', level=1)
         paragraph = document.add_paragraph("The chart illustrates the distribution of identified vulnerabilities across different risk levels: critical, high, medium, and low. Each bar's height corresponds to the number of vulnerabilities within its respective risk category. This analysis provides a clear overview of the security posture, highlighting the concentration of vulnerabilities by severity and aiding in prioritizing remediation efforts.")
         risk_chart_path = os.path.join(reports_dir, 'risk_density_chart.png')
         generate_risk_density_chart(vulnerabilities, risk_chart_path)
@@ -380,7 +379,7 @@ def generate_report():
         document.add_page_break()
 
         # Generate and insert priority density chart
-        add_colored_heading(document, 'PRIORITY ANALISYS', level=1)
+        add_colored_heading(document, 'PRIORITY ANALYSIS', level=1)
         paragraph = document.add_paragraph("The chart depicts the density of vulnerabilities based on their priority levels: critical, high, medium, and low. The height of each bar represents the number of vulnerabilities identified within each priority category. This analysis aids in understanding the prioritization of vulnerabilities, which is crucial for efficient resource allocation and effective remediation strategies.")
         priority_chart_path = os.path.join(reports_dir, 'priority_density_chart.png')
         generate_priority_chart(vulnerabilities, priority_chart_path)
@@ -571,18 +570,14 @@ def delete_report():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-@app.route('/download_report/<int:report_id>', methods=['GET'])
-def download_report(report_id):
+@app.route('/download_report/<path:filename>', methods=['GET'])
+def download_report(filename):
     try:
-        with sqlite3.connect(DATABASE) as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT report_path FROM reports WHERE id = ?', (report_id,))
-            row = cursor.fetchone()
-            if row and row[0]:
-                report_path = row[0]
-                return send_file(report_path, as_attachment=True, download_name=os.path.basename(report_path))
-            else:
-                return jsonify({'error': 'Report not found or path is empty'}), 404
+        file_path = os.path.join(reports_dir, filename.replace("/", os.path.sep))
+        if os.path.exists(file_path):
+            return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+        else:
+            return jsonify({'error': 'Report not found or path is empty'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -697,9 +692,75 @@ def unique_clients():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+## RAG ANALYSIS
+
+# Configuración de la carpeta y archivo
+reports_dir = os.path.join(os.path.dirname(__file__), 'Reports')
+os.makedirs(reports_dir, exist_ok=True)
+
+# Función para extraer texto de archivos .docx
+def extract_text_from_docx(file_path):
+    doc = Document(file_path)
+    full_text = []
+    for para in doc.paragraphs:
+        full_text.append(para.text)
+    return '\n'.join(full_text)
+
+# Función para justificar texto
+def justify_text(text, width=80):
+    return "\n".join([fill(line, width=width) for line in text.split("\n")])
+
+# Función para buscar en los documentos y enviar la pregunta a ChatRTX
+def ask_IA_in_documents(question):
+    # Crear una lista de documentos Langchain
+    documents = []
+    for filename in os.listdir(reports_dir):
+        if filename.endswith(".docx"):
+            file_path = os.path.join(reports_dir, filename)
+            text = extract_text_from_docx(file_path)
+            documents.append(LangchainDocument(page_content=text, metadata={"source": filename}))
+
+    # Procesar los documentos para Langchain
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=250)
+    texts = text_splitter.split_documents(documents)
+
+    # Crear un vector store con LangChain usando FAISS y embeddings
+    embeddings = HuggingFaceEmbeddings()
+    vector_store = FAISS.from_documents(texts, embeddings)
+    
+    # Buscamos documentos relevantes
+    relevant_docs = vector_store.similarity_search(question)
+    combined_text = ""
+    sources = set()
+    for doc in relevant_docs:
+        source = doc.metadata['source']
+        combined_text += f"Fuente: {source}\n{doc.page_content}\n\n"
+        sources.add(source)
+    
+    # Formatear texto justificado
+    justified_text = justify_text(combined_text)
+    
+    # Preguntamos a la IA de ChatRTX con el texto combinado de los documentos relevantes
+    response = ask_IA(justified_text + "\nGive me the most concrete answer possible, avoid being redundant: " + question)
+    if sources:
+        response += "\n\n<br>Source: " + ", ".join([f"<a href='/download_report/{src.replace(os.path.sep, '%5C')}'>{src}</a>" for src in sources])
+        
+    return response
+
+@app.route('/ask_in_documents', methods=['POST'])
+def ask_in_documents():
+    try:
+        data = request.get_json()
+        question = data.get('question')
+        if not question:
+            return jsonify({'error': 'No question provided'}), 400
+        
+        response = ask_IA_in_documents(question)
+        return jsonify({'response': response})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     init_db()
     migrate_db()
-
     app.run(debug=True)
