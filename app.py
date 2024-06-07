@@ -12,7 +12,6 @@ from docx.oxml import OxmlElement
 import requests
 import random
 import string
-import psutil
 import json
 from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -570,14 +569,27 @@ def delete_report():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-@app.route('/download_report/<path:filename>', methods=['GET'])
-def download_report(filename):
+# Actualizamos esta ruta para usar el `report_id`
+@app.route('/download_report/<int:report_id>', methods=['GET'])
+def download_report(report_id):
     try:
-        file_path = os.path.join(reports_dir, filename.replace("/", os.path.sep))
-        if os.path.exists(file_path):
-            return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT report_path FROM reports WHERE id = ?', (report_id,))
+            row = cursor.fetchone()
+
+        if row:
+            file_path = row[0]
+            print(f"Trying to download file at path: {file_path}")  # Debugging: Check the file path
+
+            # Verificar si el archivo existe en la ruta obtenida
+            if os.path.exists(file_path):
+                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+            else:
+                print(f"File not found at path: {file_path}")  # Debugging: File not found
+                return jsonify({'error': 'Report not found or path is empty'}), 404
         else:
-            return jsonify({'error': 'Report not found or path is empty'}), 404
+            return jsonify({'error': 'Report ID not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -742,9 +754,22 @@ def ask_IA_in_documents(question):
     
     # Preguntamos a la IA de ChatRTX con el texto combinado de los documentos relevantes
     response = ask_IA(justified_text + "\nGive me the most concrete answer possible, avoid being redundant: " + question)
+    
+    # Buscar el report_id para cada fuente y generar el enlace de descarga correcto
     if sources:
-        response += "\n\n<br>Source: " + ", ".join([f"<a href='/download_report/{src.replace(os.path.sep, '%5C')}'>{src}</a>" for src in sources])
-        
+        download_links = []
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            for source in sources:
+                cursor.execute('SELECT id FROM reports WHERE report_path LIKE ?', (f'%{source}',))
+                row = cursor.fetchone()
+                if row:
+                    report_id = row[0]
+                    download_links.append(f"<a href='/download_report/{report_id}'>{source}</a>")
+
+        if download_links:
+            response += "\n\n<br>Source: " + ", ".join(download_links)
+
     return response
 
 @app.route('/ask_in_documents', methods=['POST'])
