@@ -150,7 +150,7 @@ Experience the full potential of the **Report Generative Security Tool (RGS)** t
     <img src="./static/demo.gif" alt="RGS Extended Demo" width="600">
 </div>
 
-For a detailed walkthrough, watch our [YouTube video](https://youtu.be/WYZV3hdq4yE) demonstrating the RGS tool in action.
+For a detailed walkthrough, watch our [YouTube video](https://youtu.be/WYZV3hdq4yE) demonstrating the RGS tool deployment and his power in action.
 
 
 ## License
