@@ -106,12 +106,17 @@ To get started with RGS, follow these steps:
     cd RGS
     ```
 
-2. **Install the necessary dependencies**:
+2. **Start virtual enviroment**:
+    ```bash
+    python -m venv env
+    .\env\Scripts\activate
+    ```
+3. **Install dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
-
-3. **Setup Chat With RTX**:
+    
+4. **Setup Chat With RTX**:
     Follow the instructions on the [Chat With RTX GitHub repository](https://github.com/NVIDIA/ChatRTX) to set up TensorRT-LLM and the Chat With RTX application.
 
 
