@@ -18,7 +18,7 @@ Contest video: [Youtube](https://youtu.be/ED45kjvfaSQ?si=5_bE4Pv1JhcnmYT6)
 ![LangChain](https://img.shields.io/badge/LangChain-yellow.svg)
 ![Mistral 7B](https://img.shields.io/badge/Mistral-blue.svg)
 <div align="center">
-   [Watch the video](https://img.youtube.com/vi/ED45kjvfaSQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=ED45kjvfaSQ)
+   <img src="./static/portada.png" alt="RGS Logo" width="700" />
 </div>
 
 ## TACKLING CYBERSECURITY CHALLENGES WITH CUTTING-EDGE SOLUTIONS
