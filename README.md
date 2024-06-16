@@ -71,6 +71,24 @@ The **Report Generative Security Tool (RGS)** addresses these concerns by ensuri
 
 </div>
 
+### Unleash Intelligent Insights with Advanced RAG Analysis
+
+**RGS Tool** integrates **Retrieval-Augmented Generation (RAG) analysis** with the power of LangChain and NVIDIA, transforming how you interact with your security reports. With RAG analysis, you'll gain:
+
+- **Natural Language Insights**: Understand complex security data as if a seasoned consultant is explaining it to you, making it accessible and actionable for your team.
+- **Dynamic Trend Tracking**: Effortlessly spot trends and monitor improvements or areas of concern, ensuring you stay ahead in your security posture.
+- **Ever-Growing Intelligence**: The more reports you generate, the smarter and more insightful RGS becomes, continuously enhancing its understanding and providing deeper context.
+- **Enhanced Decision-Making**: Make informed decisions based on comprehensive analysis and historical data trends, tailored to your specific security needs.
+
+Harness the synergy of NVIDIA’s AI prowess and LangChain’s advanced language models to unlock deep, context-rich analysis with every use.
+
+<div align="center">
+    
+![RAG](./static/rag.gif)
+
+</div>
+
+
 ## Blazing Fast with RTX Speed 🚀
 
 The RGS tool demonstrates exceptional performance and efficiency in real-world scenarios. In our benchmarks, RGS generated 4749 words across 21 pages in less than a minute and a half, showcasing its ultra-fast processing capabilities. This speed and efficiency make RGS a powerful tool for consultants and security professionals who need to quickly generate comprehensive and accurate vulnerability reports.
