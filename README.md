@@ -71,7 +71,7 @@ The **Report Generative Security Tool (RGS)** addresses these concerns by ensuri
 
 </div>
 
-### Unleash Intelligent Insights with Advanced RAG Analysis
+## UNLEASH INTELLIGENT INSIGHTS WITH ADVANCED RAG ANALYSIS
 
 **RGS Tool** integrates **Retrieval-Augmented Generation (RAG) analysis** with the power of LangChain and NVIDIA, transforming how you interact with your security reports. With RAG analysis, you'll gain:
 
