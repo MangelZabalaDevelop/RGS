@@ -75,7 +75,31 @@
             <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2"> <strong>Report Generative Security Tool</strong></h1>
+                    <div id="user-info" style="display:none;">
+                        <span id="username-display" class="text-muted"></span>
+                        <button class="btn btn-sm btn-block-red ml-2" onclick="doLogout()">Logout</button>
+                    </div>
                 </div>
+
+                <div id="auth-section" style="display:none;">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header"><h4><strong>Login</strong></h4></div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Username:</label>
+                                <input type="text" class="form-control" id="login-username" placeholder="Enter username">
+                            </div>
+                            <div class="form-group">
+                                <label>Password:</label>
+                                <input type="password" class="form-control" id="login-password" placeholder="Enter password">
+                            </div>
+                            <button class="btn btn-block" onclick="doLogin()">Login</button>
+                            <div id="login-error" class="text-danger mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="app-content">
 
                 <div class="row">
                     <div class="col-md-6">
@@ -207,6 +231,7 @@
                 <footer class="text-center mt-4">
                 
                 </footer>
+                </div><!-- end app-content -->
             </main>
         </div>
     </div>
@@ -255,8 +280,7 @@
     <script>
         feather.replace();
         document.addEventListener("DOMContentLoaded", function() {
-            listReports();
-            listVulnerabilities();
+            checkAuth();
         });
     </script>
 </body>

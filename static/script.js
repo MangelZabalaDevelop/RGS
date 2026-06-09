@@ -2,6 +2,127 @@ let currentVuln = 0;
 let numVulns = 0;
 let vulnData = [];
 
+/* ============================================================
+   SAFE DOM UTILITIES — replaces all innerHTML usage
+   ============================================================ */
+
+/**
+ * Clear a container by removing all child nodes (safe alternative to innerHTML='').
+ */
+function clearElement(container) {
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
+}
+
+/**
+ * Sanitize HTML that may contain only <a href="http..."> links.
+ * Strips every other tag and attribute. Used for RAG source links.
+ */
+function sanitizeHTML(html) {
+    const temp = document.createElement('div');
+    temp.textContent = html;
+    return temp.innerHTML;
+}
+
+/**
+ * Build a paragraph that contains plain text segments and safe <a> links.
+ * Accepts a string that may contain <a href="...">...</a> tags.
+ * Only allows http/https hrefs; everything else is escaped.
+ */
+function buildSafeParagraph(htmlString, container) {
+    const p = document.createElement('p');
+
+    // Walk the string looking for <a href="...">...</a> patterns
+    const linkRegex = /<a\s+href="(https?:[^"]*)">([^<]*)<\/a>/gi;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(htmlString)) !== null) {
+        // Text before the link
+        if (match.index > lastIndex) {
+            const textNode = document.createTextNode(
+                htmlString.substring(lastIndex, match.index)
+            );
+            p.appendChild(textNode);
+        }
+        // The link itself
+        const a = document.createElement('a');
+        a.href = match[1];
+        a.textContent = match[2];
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        p.appendChild(a);
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Remaining text after the last link
+    if (lastIndex < htmlString.length) {
+        const textNode = document.createTextNode(
+            htmlString.substring(lastIndex)
+        );
+        p.appendChild(textNode);
+    }
+
+    container.appendChild(p);
+}
+
+/**
+ * Create a <select> element with options.
+ */
+function createSelect(name, options, selectedValue) {
+    const select = document.createElement('select');
+    select.className = 'form-control';
+    select.name = name;
+    select.required = true;
+
+    options.forEach(function(opt) {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        if (opt.value === selectedValue) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+
+    return select;
+}
+
+/**
+ * Create a labelled form group (wrapper div with label + input/select/textarea).
+ */
+function createFormGroup(labelText, element) {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    group.appendChild(label);
+    group.appendChild(element);
+
+    return group;
+}
+
+/**
+ * Create a form-row with a column wrapper.
+ */
+function createFormRowColumn(colClass, child) {
+    const row = document.createElement('div');
+    row.className = 'form-row';
+
+    const col = document.createElement('div');
+    col.className = colClass;
+    col.appendChild(child);
+    row.appendChild(col);
+
+    return row;
+}
+
+/* ============================================================
+   GENERATE VULNERABILITY FIELD BUTTONS (safe)
+   ============================================================ */
+
 function generateVulnFields() {
     numVulns = document.getElementById('num-vulns').value;
     if (numVulns <= 0) {
@@ -14,15 +135,28 @@ function generateVulnFields() {
         vulnData.push({});
     }
 
-    document.getElementById('vuln-modals').innerHTML = '';
+    const container = document.getElementById('vuln-modals');
+    clearElement(container);
+
     for (let i = 0; i < numVulns; i++) {
-        document.getElementById('vuln-modals').innerHTML += `
-            <button type="button" class="btn btn-secondary btn-block mt-2" onclick="openModal(${i})">Edit Vulnerability ${i + 1}</button>
-        `;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-secondary btn-block mt-2';
+        button.textContent = 'Edit Vulnerability ' + (i + 1);
+        (function(index) {
+            button.addEventListener('click', function() {
+                openModal(index);
+            });
+        })(i);
+        container.appendChild(button);
     }
 
     document.getElementById('action-buttons').style.display = 'flex';
 }
+
+/* ============================================================
+   MODAL HELPERS
+   ============================================================ */
 
 function openModal(index) {
     currentVuln = index;
@@ -38,78 +172,153 @@ function closeViewModal() {
     $('#view-modal-container').modal('hide');
 }
 
+/* ============================================================
+   POPULATE VULNERABILITY FORM FIELDS (safe — no innerHTML)
+   ============================================================ */
+
 function populateVulnFields(index) {
     const vuln = vulnData[index];
-    document.getElementById('vuln-fields').innerHTML = `
-    <div class="form-row">
-        <div class="form-group col-md-12 ">
-            <label>Name:</label>
-            <input type="text" class="form-control" name="name" value="${vuln.name || ''}" oninput="suggestVulnerabilities(this.value)" required>
-            <div id="suggestions" class="list-group"></div>
-        </div>
-    </div>    
-    <div class="form-row">    
-        <div class="form-group col-md-3">
-            <label>Risk:</label>
-            <select class="form-control" name="risk" required>
-                <option value="">Select...</option>
-                <option value="Critical" ${vuln.risk === 'Critical' ? 'selected' : ''}>Critical</option>
-                <option value="High" ${vuln.risk === 'High' ? 'selected' : ''}>High</option>
-                <option value="Medium" ${vuln.risk === 'Medium' ? 'selected' : ''}>Medium</option>
-                <option value="Low" ${vuln.risk === 'Low' ? 'selected' : ''}>Low</option>
-            </select>
-        </div>
-        <div class="form-group col-md-3">
-            <label>Priority:</label>
-            <select class="form-control" name="priority" required>
-                <option value="">Select...</option>
-                <option value="High" ${vuln.priority === 'High' ? 'selected' : ''}>High</option>
-                <option value="Medium" ${vuln.priority === 'Medium' ? 'selected' : ''}>Medium</option>
-                <option value="Low" ${vuln.priority === 'Low' ? 'selected' : ''}>Low</option>
-            </select>
-        </div>
-        <div class="form-group col-md-6">
-            <label>Remediation Complexity:</label>
-            <select class="form-control" name="complexity" required>
-                <option value="">Select...</option>
-                <option value="High" ${vuln.complexity === 'High' ? 'selected' : ''}>High</option>
-                <option value="Medium" ${vuln.complexity === 'Medium' ? 'selected' : ''}>Medium</option>
-                <option value="Low" ${vuln.complexity === 'Low' ? 'selected' : ''}>Low</option>
-            </select>
-        </div>
-    </div>
-    <div class="form-row">      
-        <div class="form-group col-md-4">
-            <label>Service:</label>
-            <select class="form-control" name="service" required>
-                <option value="">Select...</option>
-                <option value="Web">Web</option>
-                <option value="Infrastructure" >Infrastructure</option>
-            </select>
-        </div>
-        <div class="form-group col-md-8">
-            <label>Hosts affected:</label>
-            <input type="text" class="form-control" name="assets" value="${vuln.assets || ''}" required>
-        </div>
-    </div>
-        <div class="form-group">
-            <label>Description:</label>
-            <textarea class="form-control" name="description" required>${vuln.description || ''}</textarea>
-        </div>
-        <div class="form-group">
-            <label>Impact:</label>
-            <textarea class="form-control" name="impact" required>${vuln.impact || ''}</textarea>
-        </div>
-        <div class="form-group">
-            <label>Recommendations:</label>
-            <textarea class="form-control" name="recommendations" required>${vuln.recommendations || ''}</textarea>
-        </div>
-        <div class="form-group">
-            <label>References:</label>
-            <textarea class="form-control" name="references" required>${vuln.references_web || ''}</textarea>
-        </div>
-    `;
+    const container = document.getElementById('vuln-fields');
+    clearElement(container);
+
+    /* --- Row 1: Name input + suggestions --- */
+    (function() {
+        const row = document.createElement('div');
+        row.className = 'form-row';
+
+        const col = document.createElement('div');
+        col.className = 'form-group col-md-12';
+
+        const label = document.createElement('label');
+        label.textContent = 'Name:';
+        col.appendChild(label);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'form-control';
+        input.name = 'name';
+        input.value = vuln.name || '';
+        input.required = true;
+        input.addEventListener('input', function() {
+            suggestVulnerabilities(this.value);
+        });
+        col.appendChild(input);
+
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.id = 'suggestions';
+        suggestionsDiv.className = 'list-group';
+        col.appendChild(suggestionsDiv);
+
+        row.appendChild(col);
+        container.appendChild(row);
+    })();
+
+    /* --- Row 2: Risk, Priority, Complexity selects --- */
+    (function() {
+        const row = document.createElement('div');
+        row.className = 'form-row';
+
+        const riskOpts = [
+            { value: '', label: 'Select...' },
+            { value: 'Critical', label: 'Critical' },
+            { value: 'High', label: 'High' },
+            { value: 'Medium', label: 'Medium' },
+            { value: 'Low', label: 'Low' }
+        ];
+        const riskCol = document.createElement('div');
+        riskCol.className = 'form-group col-md-3';
+        riskCol.appendChild(createFormGroup('Risk:', createSelect('risk', riskOpts, vuln.risk || '')));
+        row.appendChild(riskCol);
+
+        const priorityOpts = [
+            { value: '', label: 'Select...' },
+            { value: 'High', label: 'High' },
+            { value: 'Medium', label: 'Medium' },
+            { value: 'Low', label: 'Low' }
+        ];
+        const priorityCol = document.createElement('div');
+        priorityCol.className = 'form-group col-md-3';
+        priorityCol.appendChild(createFormGroup('Priority:', createSelect('priority', priorityOpts, vuln.priority || '')));
+        row.appendChild(priorityCol);
+
+        const complexityOpts = [
+            { value: '', label: 'Select...' },
+            { value: 'High', label: 'High' },
+            { value: 'Medium', label: 'Medium' },
+            { value: 'Low', label: 'Low' }
+        ];
+        const complexityCol = document.createElement('div');
+        complexityCol.className = 'form-group col-md-6';
+        complexityCol.appendChild(createFormGroup('Remediation Complexity:', createSelect('complexity', complexityOpts, vuln.complexity || '')));
+        row.appendChild(complexityCol);
+
+        container.appendChild(row);
+    })();
+
+    /* --- Row 3: Service select + Assets input --- */
+    (function() {
+        const row = document.createElement('div');
+        row.className = 'form-row';
+
+        const serviceOpts = [
+            { value: '', label: 'Select...' },
+            { value: 'Web', label: 'Web' },
+            { value: 'Infrastructure', label: 'Infrastructure' }
+        ];
+        const serviceCol = document.createElement('div');
+        serviceCol.className = 'form-group col-md-4';
+        serviceCol.appendChild(createFormGroup('Service:', createSelect('service', serviceOpts, vuln.service || '')));
+        row.appendChild(serviceCol);
+
+        const assetsCol = document.createElement('div');
+        assetsCol.className = 'form-group col-md-8';
+
+        const assetsLabel = document.createElement('label');
+        assetsLabel.textContent = 'Hosts affected:';
+        assetsCol.appendChild(assetsLabel);
+
+        const assetsInput = document.createElement('input');
+        assetsInput.type = 'text';
+        assetsInput.className = 'form-control';
+        assetsInput.name = 'assets';
+        assetsInput.value = vuln.assets || '';
+        assetsInput.required = true;
+        assetsCol.appendChild(assetsInput);
+
+        row.appendChild(assetsCol);
+        container.appendChild(row);
+    })();
+
+    /* --- Textareas: Description, Impact, Recommendations, References --- */
+    var textareaFields = [
+        { name: 'description', label: 'Description:', value: vuln.description || '' },
+        { name: 'impact', label: 'Impact:', value: vuln.impact || '' },
+        { name: 'recommendations', label: 'Recommendations:', value: vuln.recommendations || '' },
+        { name: 'references', label: 'References:', value: vuln.references_web || '' }
+    ];
+
+    textareaFields.forEach(function(field) {
+        const label = document.createElement('label');
+        label.textContent = field.label;
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'form-control';
+        textarea.name = field.name;
+        textarea.required = true;
+        textarea.textContent = field.value;
+
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        group.appendChild(label);
+        group.appendChild(textarea);
+
+        container.appendChild(group);
+    });
 }
+
+/* ============================================================
+   SAVE VULNERABILITY
+   ============================================================ */
 
 function saveVuln() {
     const formData = new FormData(document.getElementById('vuln-form'));
@@ -120,6 +329,10 @@ function saveVuln() {
     vulnData[currentVuln] = vuln;
     closeModal();
 }
+
+/* ============================================================
+   SUBMIT ALL VULNERABILITIES
+   ============================================================ */
 
 function submitAllVulns() {
     document.getElementById('loading').style.display = 'block';
@@ -137,17 +350,21 @@ function submitAllVulns() {
     .then(data => {
         document.getElementById('loading').style.display = 'none';
         if (data.error) {
-            document.getElementById('response').innerText = `Error: ${data.error}`;
+            document.getElementById('response').textContent = 'Error: ' + data.error;
         } else {
-            document.getElementById('response').innerText = data.response;
+            document.getElementById('response').textContent = data.response;
             listVulnerabilities();
         }
     })
     .catch(error => {
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('response').innerText = `Error: ${error}`;
+        document.getElementById('response').textContent = 'Error: ' + error;
     });
 }
+
+/* ============================================================
+   GENERATE REPORT
+   ============================================================ */
 
 function generateReport() {
     document.getElementById('loading').style.display = 'block';
@@ -165,40 +382,47 @@ function generateReport() {
     .then(data => {
         document.getElementById('loading').style.display = 'none';
         if (data.error) {
-            document.getElementById('response').innerText = `Error: ${data.error}`;
+            document.getElementById('response').textContent = 'Error: ' + data.error;
         } else {
-            document.getElementById('response').innerText = data.message;
+            document.getElementById('response').textContent = data.message;
             listReports();
         }
     })
     .catch(error => {
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('response').innerText = `Error: ${error}`;
+        document.getElementById('response').textContent = 'Error: ' + error;
     });
 }
 
+/* ============================================================
+   SUGGEST VULNERABILITIES (safe — createElement + textContent)
+   ============================================================ */
+
 function suggestVulnerabilities(query) {
     if (!query) {
-        document.getElementById('suggestions').innerHTML = '';
+        var suggestionsContainer = document.getElementById('suggestions');
+        if (suggestionsContainer) {
+            clearElement(suggestionsContainer);
+        }
         return;
     }
 
-    fetch(`/suggest_vulnerabilities?query=${query}`)
+    fetch('/suggest_vulnerabilities?query=' + encodeURIComponent(query))
         .then(response => response.json())
         .then(data => {
-            const suggestions = data.suggestions;
-            const suggestionsContainer = document.getElementById('suggestions');
-            suggestionsContainer.innerHTML = '';
-            suggestions.forEach(suggestion => {
-                const suggestionItem = document.createElement('a');
+            var suggestions = data.suggestions;
+            var suggestionsContainer = document.getElementById('suggestions');
+            clearElement(suggestionsContainer);
+            suggestions.forEach(function(suggestion) {
+                var suggestionItem = document.createElement('a');
                 suggestionItem.href = '#';
                 suggestionItem.className = 'list-group-item list-group-item-action';
-                suggestionItem.innerText = suggestion;
-                suggestionItem.onclick = () => {
+                suggestionItem.textContent = suggestion;
+                suggestionItem.addEventListener('click', function() {
                     document.getElementsByName('name')[0].value = suggestion;
                     loadVulnerability(suggestion);
-                    suggestionsContainer.innerHTML = '';
-                };
+                    clearElement(suggestionsContainer);
+                });
                 suggestionsContainer.appendChild(suggestionItem);
             });
         })
@@ -207,18 +431,22 @@ function suggestVulnerabilities(query) {
         });
 }
 
+/* ============================================================
+   LOAD VULNERABILITY
+   ============================================================ */
+
 function loadVulnerability(name) {
     fetch('/search_vulnerability', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ name: name })
     })
     .then(response => response.json())
     .then(data => {
         if (data.vulnerability) {
-            const vuln = data.vulnerability;
+            var vuln = data.vulnerability;
             document.getElementsByName('name')[0].value = vuln.name;
             document.getElementsByName('risk')[0].value = vuln.risk;
             document.getElementsByName('priority')[0].value = vuln.priority;
@@ -236,29 +464,70 @@ function loadVulnerability(name) {
     });
 }
 
+/* ============================================================
+   LIST VULNERABILITIES (safe — createElement + textContent)
+   ============================================================ */
+
 function listVulnerabilities() {
     fetch('/list_vulnerabilities')
         .then(response => response.json())
         .then(data => {
-            const vulnerabilities = data.vulnerabilities;
-            const vulnList = document.getElementById('vuln-list');
-            vulnList.innerHTML = '';
+            var vulnerabilities = data.vulnerabilities;
+            var vulnList = document.getElementById('vuln-list');
+            clearElement(vulnList);
             if ($.fn.DataTable.isDataTable('#vulnerabilities-table')) {
                 $('#vulnerabilities-table').DataTable().clear().destroy();
             }
-            vulnerabilities.forEach(vuln => {
-                const vulnItem = document.createElement('tr');
-                vulnItem.innerHTML = `
-                    <td>${vuln.id}</td>
-                    <td>${vuln.name}</td>
-                    <td>${vuln.risk}</td>
-                    <td>
-                        <div style="display: flex;">
-                            <button class="btn btn-sm btn-block" onclick="viewVulnerability(${vuln.id})"><i class="fas fa-eye"></i></button>
-                            <button class="btn btn-sm btn-block-gray" onclick="deleteVulnerability(${vuln.id})"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                    </td>
-                `;
+            vulnerabilities.forEach(function(vuln) {
+                var vulnItem = document.createElement('tr');
+
+                // ID cell
+                var tdId = document.createElement('td');
+                tdId.textContent = vuln.id;
+                vulnItem.appendChild(tdId);
+
+                // Name cell
+                var tdName = document.createElement('td');
+                tdName.textContent = vuln.name;
+                vulnItem.appendChild(tdName);
+
+                // Risk cell
+                var tdRisk = document.createElement('td');
+                tdRisk.textContent = vuln.risk;
+                vulnItem.appendChild(tdRisk);
+
+                // Actions cell
+                var tdActions = document.createElement('td');
+                var actionsDiv = document.createElement('div');
+                actionsDiv.style.display = 'flex';
+
+                var viewBtn = document.createElement('button');
+                viewBtn.className = 'btn btn-sm btn-block';
+                (function(vulnId) {
+                    viewBtn.addEventListener('click', function() {
+                        viewVulnerability(vulnId);
+                    });
+                })(vuln.id);
+                var viewIcon = document.createElement('i');
+                viewIcon.className = 'fas fa-eye';
+                viewBtn.appendChild(viewIcon);
+                actionsDiv.appendChild(viewBtn);
+
+                var deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-block-gray';
+                (function(vulnId) {
+                    deleteBtn.addEventListener('click', function() {
+                        deleteVulnerability(vulnId);
+                    });
+                })(vuln.id);
+                var deleteIcon = document.createElement('i');
+                deleteIcon.className = 'fas fa-trash-alt';
+                deleteBtn.appendChild(deleteIcon);
+                actionsDiv.appendChild(deleteBtn);
+
+                tdActions.appendChild(actionsDiv);
+                vulnItem.appendChild(tdActions);
+
                 vulnList.appendChild(vulnItem);
             });
             $('#vulnerabilities-table').DataTable({
@@ -271,24 +540,41 @@ function listVulnerabilities() {
         });
 }
 
+/* ============================================================
+   VIEW VULNERABILITY (safe — createElement + textContent)
+   ============================================================ */
+
 function viewVulnerability(id) {
-    fetch(`/get_vulnerability/${id}`)
+    fetch('/get_vulnerability/' + id)
         .then(response => response.json())
         .then(data => {
-            const vuln = data.vulnerability;
+            var vuln = data.vulnerability;
             if (vuln) {
-                document.getElementById('view-vuln-content').innerHTML = `
-                    <p><strong>Name:</strong> ${vuln.name}</p>
-                    <p><strong>Risk:</strong> ${vuln.risk}</p>
-                    <p><strong>Priority:</strong> ${vuln.priority}</p>
-                    <p><strong>Remediation Complexity:</strong> ${vuln.complexity}</p>
-                    <p><strong>Affected Service:</strong> ${vuln.service}</p>
-                    <p><strong>Affected Assets:</strong> ${vuln.assets}</p>
-                    <p><strong>Description:</strong> ${vuln.description}</p>
-                    <p><strong>Impact:</strong> ${vuln.impact}</p>
-                    <p><strong>Recommendations:</strong> ${vuln.recommendations}</p>
-                    <p><strong>References:</strong> ${vuln.references}</p>
-                `;
+                var content = document.getElementById('view-vuln-content');
+                clearElement(content);
+
+                var fields = [
+                    { label: 'Name', value: vuln.name },
+                    { label: 'Risk', value: vuln.risk },
+                    { label: 'Priority', value: vuln.priority },
+                    { label: 'Remediation Complexity', value: vuln.complexity },
+                    { label: 'Affected Service', value: vuln.service },
+                    { label: 'Affected Assets', value: vuln.assets },
+                    { label: 'Description', value: vuln.description },
+                    { label: 'Impact', value: vuln.impact },
+                    { label: 'Recommendations', value: vuln.recommendations },
+                    { label: 'References', value: vuln.references_web || '' }
+                ];
+
+                fields.forEach(function(field) {
+                    var p = document.createElement('p');
+                    var strong = document.createElement('strong');
+                    strong.textContent = field.label + ': ';
+                    p.appendChild(strong);
+                    p.appendChild(document.createTextNode(field.value || ''));
+                    content.appendChild(p);
+                });
+
                 $('#view-modal-container').modal('show');
             }
         })
@@ -297,13 +583,17 @@ function viewVulnerability(id) {
         });
 }
 
+/* ============================================================
+   DELETE VULNERABILITY
+   ============================================================ */
+
 function deleteVulnerability(id) {
     fetch('/delete_vulnerability', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id: id })
     })
     .then(response => response.json())
     .then(data => {
@@ -311,7 +601,7 @@ function deleteVulnerability(id) {
             alert(data.message);
             listVulnerabilities();
         } else if (data.error) {
-            alert(`Error: ${data.error}`);
+            alert('Error: ' + data.error);
         }
     })
     .catch(error => {
@@ -319,32 +609,77 @@ function deleteVulnerability(id) {
     });
 }
 
+/* ============================================================
+   LIST REPORTS (safe — createElement + textContent)
+   ============================================================ */
+
 function listReports() {
     fetch('/list_reports')
         .then(response => response.json())
         .then(data => {
-            const reportsList = document.getElementById('reports-list');
-            reportsList.innerHTML = '';
+            var reportsList = document.getElementById('reports-list');
+            clearElement(reportsList);
             if ($.fn.DataTable.isDataTable('#reports-table')) {
                 $('#reports-table').DataTable().clear().destroy();
             }
-            data.reports.forEach(report => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${report.id}</td>
-                    <td>${report.client}</td>
-                    <td>${report.num_vulnerabilities}</td>
-                    <td>${report.generation_date}</td>
-                    <td>
-                        <div style="display: flex;">
-                            <button class="btn btn-sm btn-block" onclick="window.location.href='/download_report/${report.id}'"><i class="fas fa-download"></i></button>
-                            <button class="btn btn-sm btn-block-gray" onclick="deleteReport(${report.id})"><i class="fas fa-trash-alt"></i></button>
-                        </div>    
-                    </td>
-                `;
+            data.reports.forEach(function(report) {
+                var row = document.createElement('tr');
+
+                // ID cell
+                var tdId = document.createElement('td');
+                tdId.textContent = report.id;
+                row.appendChild(tdId);
+
+                // Client cell
+                var tdClient = document.createElement('td');
+                tdClient.textContent = report.client;
+                row.appendChild(tdClient);
+
+                // Num vulnerabilities cell
+                var tdNum = document.createElement('td');
+                tdNum.textContent = report.num_vulnerabilities;
+                row.appendChild(tdNum);
+
+                // Generation date cell
+                var tdDate = document.createElement('td');
+                tdDate.textContent = report.generation_date;
+                row.appendChild(tdDate);
+
+                // Actions cell
+                var tdActions = document.createElement('td');
+                var actionsDiv = document.createElement('div');
+                actionsDiv.style.display = 'flex';
+
+                var downloadBtn = document.createElement('button');
+                downloadBtn.className = 'btn btn-sm btn-block';
+                (function(reportId) {
+                    downloadBtn.addEventListener('click', function() {
+                        window.location.href = '/download_report/' + reportId;
+                    });
+                })(report.id);
+                var downloadIcon = document.createElement('i');
+                downloadIcon.className = 'fas fa-download';
+                downloadBtn.appendChild(downloadIcon);
+                actionsDiv.appendChild(downloadBtn);
+
+                var deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-block-gray';
+                (function(reportId) {
+                    deleteBtn.addEventListener('click', function() {
+                        deleteReport(reportId);
+                    });
+                })(report.id);
+                var deleteIcon = document.createElement('i');
+                deleteIcon.className = 'fas fa-trash-alt';
+                deleteBtn.appendChild(deleteIcon);
+                actionsDiv.appendChild(deleteBtn);
+
+                tdActions.appendChild(actionsDiv);
+                row.appendChild(tdActions);
+
                 reportsList.appendChild(row);
             });
-            
+
             $('#reports-table').DataTable({
                 "lengthChange": false,
                 "pageLength": 5
@@ -353,13 +688,17 @@ function listReports() {
         .catch(error => console.error('Error:', error));
 }
 
+/* ============================================================
+   DELETE REPORT
+   ============================================================ */
+
 function deleteReport(id) {
     fetch('/delete_report', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id: id })
     })
     .then(response => response.json())
     .then(data => {
@@ -367,7 +706,7 @@ function deleteReport(id) {
             alert(data.message);
             listReports();
         } else if (data.error) {
-            alert(`Error: ${data.error}`);
+            alert('Error: ' + data.error);
         }
     })
     .catch(error => {
@@ -375,15 +714,23 @@ function deleteReport(id) {
     });
 }
 
+/* ============================================================
+   POPULATE CLIENT DROPDOWN
+   ============================================================ */
+
 function populateClientDropdown() {
     $.get('/unique_clients', function(data) {
-        const clientSelect = $('#client-select');
+        var clientSelect = $('#client-select');
         clientSelect.empty();
-        data.clients.forEach(client => {
+        data.clients.forEach(function(client) {
             clientSelect.append(new Option(client, client));
         });
     });
 }
+
+/* ============================================================
+   CHAT — RAG ANALYSIS (safe — textContent + safe link rendering)
+   ============================================================ */
 
 document.getElementById('chat-send').addEventListener('click', function() {
     var chatInput = document.getElementById('chat-input').value;
@@ -407,13 +754,12 @@ document.getElementById('chat-send').addEventListener('click', function() {
                 console.error('Error:', data.error);
             } else {
                 var chatBox = document.getElementById('chat-box');
-                var responseElement = document.createElement('p');
-                responseElement.innerHTML = data.response; // Use innerHTML to render HTML content
-                chatBox.appendChild(responseElement);
+                // Use safe paragraph builder that only allows <a> tags with http/https
+                buildSafeParagraph(data.response, chatBox);
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
         })
-        .catch((error) => {
+        .catch(function(error) {
             // Hide loading animation
             document.getElementById('loading-container').style.display = 'none';
             console.error('Error:', error);
@@ -423,5 +769,5 @@ document.getElementById('chat-send').addEventListener('click', function() {
 
 document.getElementById('chat-clear').addEventListener('click', function() {
     var chatBox = document.getElementById('chat-box');
-    chatBox.innerHTML = '';
+    clearElement(chatBox);
 });

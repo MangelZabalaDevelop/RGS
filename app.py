@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify, render_template, send_file
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import os
+import bcrypt
+import secrets
 from docx import Document
 from docx.shared import Inches, RGBColor
 from datetime import datetime
@@ -18,19 +21,108 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.docstore.document import Document as LangchainDocument
 from textwrap import fill
+import dotenv
+
+# Load environment variables from .env file if present
+dotenv.load_dotenv()
 
 ## CHAT WITH RTX SERVER
 port = 12594
 fn_index = 100
-appdata_folder = os.path.dirname(os.getenv('APPDATA')).replace('\\', '/')
-cert_path = appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/servercert.pem"
-key_path = appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/serverkey.pem"
-ca_bundle = appdata_folder + "/Local/NVIDIA/ChatRTX/env_nvd_rag/Library/ssl/cacert.pem"
+appdata_folder = os.path.dirname(os.getenv('APPDATA', '')).replace('\\', '/')
+cert_path = os.getenv('CHATRTX_CERT_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/servercert.pem")
+key_path = os.getenv('CHATRTX_KEY_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/serverkey.pem")
+ca_bundle = os.getenv('CHATRTX_CA_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/env_nvd_rag/Library/ssl/cacert.pem")
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
+
+# Security configuration
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', '16777216'))  # 16MB max
 
 # Database configuration
 DATABASE = 'vulnerabilities.db'
+
+# ============================================================
+# Authentication System
+# ============================================================
+
+class User(UserMixin):
+    def __init__(self, username, user_id='admin'):
+        self.username = username
+        self.id = user_id
+
+# In-memory user storage (in production, use a database)
+users_db = {}
+
+def init_auth():
+    """Initialize authentication system with admin user from environment"""
+    admin_username = os.getenv('ADMIN_USERNAME', 'admin')
+    admin_password = os.getenv('ADMIN_PASSWORD', None)
+
+    if admin_password:
+        password_hash = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    else:
+        # Default: require setup on first run
+        password_hash = bcrypt.hashpw('changeme'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        print('WARNING: Using default password "changeme". Set ADMIN_PASSWORD environment variable.')
+
+    users_db[admin_username] = {
+        'password_hash': password_hash,
+        'role': 'admin'
+    }
+
+def create_login_manager():
+    login_manager = LoginManager()
+    login_manager.session_protection = 'strong'
+    login_manager.login_view = 'login'
+    login_manager.login_message_category = 'danger'
+    return login_manager
+
+login_manager = create_login_manager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(username=user_id, user_id=user_id) if user_id in users_db else None
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return jsonify({'error': 'Authentication required'}), 401
+
+# Auth endpoints
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return jsonify({'message': 'Send POST with username and password'})
+
+    data = request.get_json()
+    username = data.get('username', '')
+    password = data.get('password', '')
+
+    if username in users_db:
+        stored_hash = users_db[username]['password_hash']
+        if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
+            user = User(username=username, user_id=username)
+            login_user(user)
+            return jsonify({'message': 'Login successful'})
+
+    return jsonify({'error': 'Invalid credentials'}), 401
+
+@app.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({'message': 'Logout successful'})
+
+@app.route('/auth/status', methods=['GET'])
+def auth_status():
+    if current_user.is_authenticated:
+        return jsonify({'authenticated': True, 'username': current_user.username})
+    return jsonify({'authenticated': False})
 
 def init_db():
     with sqlite3.connect(DATABASE) as conn:
@@ -262,10 +354,12 @@ def index():
     return render_template('index.html')
 
 @app.route('/historical_analysis')
+@login_required
 def historical_analysis():
     return render_template('historical_analysis.html')
 
 @app.route('/ask', methods=['POST'])
+@login_required
 def ask():
     try:
         data = request.get_json()
@@ -303,6 +397,7 @@ def ask():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/generate_report', methods=['POST'])
+@login_required
 def generate_report():
     try:
         data = request.get_json()
@@ -462,6 +557,7 @@ def generate_report():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/submit_vulnerabilities', methods=['POST'])
+@login_required
 def submit_vulnerabilities():
     try:
         data = request.get_json()
@@ -498,6 +594,7 @@ def submit_vulnerabilities():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/list_vulnerabilities', methods=['GET'])
+@login_required
 def list_vulnerabilities():
     try:
         with sqlite3.connect(DATABASE) as conn:
@@ -527,6 +624,7 @@ def list_vulnerabilities():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/delete_vulnerability', methods=['POST'])
+@login_required
 def delete_vulnerability():
     try:
         data = request.get_json()
@@ -542,6 +640,7 @@ def delete_vulnerability():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/list_reports', methods=['GET'])
+@login_required
 def list_reports():
     try:
         with sqlite3.connect(DATABASE) as conn:
@@ -555,6 +654,7 @@ def list_reports():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/delete_report', methods=['POST'])
+@login_required
 def delete_report():
     try:
         data = request.get_json()
@@ -571,6 +671,7 @@ def delete_report():
 
 # Actualizamos esta ruta para usar el `report_id`
 @app.route('/download_report/<int:report_id>', methods=['GET'])
+@login_required
 def download_report(report_id):
     try:
         with sqlite3.connect(DATABASE) as conn:
@@ -594,6 +695,7 @@ def download_report(report_id):
         return jsonify({'error': str(e)}), 400
 
 @app.route('/suggest_vulnerabilities', methods=['GET'])
+@login_required
 def suggest_vulnerabilities():
     query = request.args.get('query', '')
     try:
@@ -628,6 +730,7 @@ def suggest_vulnerabilities():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/search_vulnerability', methods=['POST'])
+@login_required
 def search_vulnerability():
     data = request.get_json()
     name = data.get('name', '')
@@ -663,6 +766,7 @@ def search_vulnerability():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/get_vulnerability/<int:vuln_id>', methods=['GET'])
+@login_required
 def get_vulnerability(vuln_id):
     try:
         with sqlite3.connect(DATABASE) as conn:
@@ -693,6 +797,7 @@ def get_vulnerability(vuln_id):
         return jsonify({'error': str(e)}), 400
     
 @app.route('/unique_clients', methods=['GET'])
+@login_required
 def unique_clients():
     try:
         with sqlite3.connect(DATABASE) as conn:
@@ -773,6 +878,7 @@ def ask_IA_in_documents(question):
     return response
 
 @app.route('/ask_in_documents', methods=['POST'])
+@login_required
 def ask_in_documents():
     try:
         data = request.get_json()
@@ -788,4 +894,8 @@ def ask_in_documents():
 if __name__ == '__main__':
     init_db()
     migrate_db()
-    app.run(debug=True)
+    init_auth()
+    debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    port_num = int(os.environ.get('FLASK_PORT', '5000'))
+    app.run(debug=debug_mode, host=host, port=port_num)

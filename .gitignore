@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated reports
+Reports/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Charts generated during report generation
+risk_density_chart.png
+priority_density_chart.png
+complexity_density_chart.png
