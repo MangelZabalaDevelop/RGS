@@ -20,10 +20,6 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import requests
 import json
-from langchain.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.docstore.document import Document as LangchainDocument
 from textwrap import fill
 import dotenv
 
@@ -41,9 +37,12 @@ logger = logging.getLogger('rgs.security')
 # Load environment variables from .env file if present
 dotenv.load_dotenv()
 
-## CHAT WITH RTX SERVER
-port = 12594
-fn_index = 100
+## LLM CONFIGURATION — OpenAI-compatible API (vLLM / Ollama / ChatRTX)
+LLM_BASE_URL = os.getenv('LLM_BASE_URL', 'http://192.168.0.13:9494/v1')
+LLM_MODEL = os.getenv('LLM_MODEL', 'Qwen3.6-35B-A3B')
+LLM_API_KEY = os.getenv('LLM_API_KEY', 'not-needed')
+
+# Keep ChatRTX paths for backward compatibility (unused when LLM_BASE_URL is set)
 appdata_folder = os.path.dirname(os.getenv('APPDATA', '')).replace('\\', '/')
 cert_path = os.getenv('CHATRTX_CERT_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/servercert.pem")
 key_path = os.getenv('CHATRTX_KEY_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/serverkey.pem")
@@ -263,7 +262,7 @@ def set_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' code.jquery.com cdn.jsdelivr.net stackpath.bootstrapcdn.com cdn.datatables.net unpkg.com; style-src 'self' 'unsafe-inline' stackpath.bootstrapcdn.com cdn.cloudflare.com cdn.datatables.net; img-src 'self' data:; font-src 'self' cdn.cloudflare.com;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' code.jquery.com cdn.jsdelivr.net stackpath.bootstrapcdn.com cdn.datatables.net cdnjs.cloudflare.com unpkg.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net stackpath.bootstrapcdn.com cdnjs.cloudflare.com cdn.datatables.net; img-src 'self' data:; font-src 'self' cdnjs.cloudflare.com;"
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
@@ -433,45 +432,38 @@ def log_audit_action(action, resource_type, resource_id, details='', user=None):
     except Exception as e:
         logger.error(f"Failed to write audit log: {e}", exc_info=True)
 
-def join_queue(session_hash, set_fn_index, port, chatdata):
-    #fn_indexes are some gradio generated indexes from rag/trt/ui/user_interface.py
-    python_object = {
-        "data": chatdata,
-        "event_data": None,
-        "fn_index": set_fn_index,
-        "session_hash": session_hash
-    }
-    json_string = json.dumps(python_object)
-
-    url = f"https://127.0.0.1:{port}/queue/join"
-    response = requests.post(url, data=json_string, cert=(cert_path, key_path), verify=ca_bundle)
-    # print("Join Queue Response:", response)
-
-def listen_for_updates(session_hash, port):
-    url = f"https://127.0.0.1:{port}/queue/data?session_hash={session_hash}"
-
-    response = requests.get(url, stream=True, cert=(cert_path, key_path), verify=ca_bundle)
-    # print("Listen Response:", response)
-    try:
-        for line in response.iter_lines():
-            if line:
-                    data = json.loads(line[5:])
-                    # if data['msg'] == 'process_generating':
-                    #     print(data['output']['data'][0][0][1])
-                    if data['msg'] == 'process_completed':
-                        return data['output']['data'][0][0][1]
-    except Exception as e:
-        pass
-    return ""
-
 def ask_IA(message):
-    global fn_index
-
-    session_hash = generate_session_hash()
-
-    chatdata = [[[message, None]], None]
-    join_queue(session_hash, fn_index, port, chatdata)
-    return listen_for_updates(session_hash, port)
+    """Query the LLM via OpenAI-compatible API (vLLM/Ollama)."""
+    try:
+        response = requests.post(
+            f"{LLM_BASE_URL}/chat/completions",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {LLM_API_KEY}"
+            },
+            json={
+                "model": LLM_MODEL,
+                "messages": [
+                    {"role": "system", "content": "You are a security audit report assistant. Provide clear, professional, and detailed responses."},
+                    {"role": "user", "content": message}
+                ],
+                "max_tokens": 2048,
+                "temperature": 0.7
+            },
+            timeout=120
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    except requests.exceptions.ConnectionError:
+        logger.error(f"Cannot connect to LLM at {LLM_BASE_URL}")
+        return f"[LLM unavailable at {LLM_BASE_URL}. Check configuration.]"
+    except requests.exceptions.Timeout:
+        logger.error("LLM request timed out")
+        return "[LLM request timed out. Please try again.]"
+    except Exception as e:
+        logger.error(f"LLM error: {e}", exc_info=True)
+        return f"[LLM error occurred. Check server logs.]"
 
 def add_formatted_paragraph(document, text):
     parts = text.split('**')
@@ -1234,7 +1226,7 @@ def unique_clients():
         logger.error(f"Error in /unique_clients: {e}", exc_info=True)
         return jsonify({'error': 'Failed to get clients'}), 500
 
-## RAG ANALYSIS
+## RAG ANALYSIS — Simplified (keyword-based, no FAISS/LangChain)
 
 # Configuración de la carpeta y archivo
 reports_dir = os.path.join(os.path.dirname(__file__), 'Reports')
@@ -1248,42 +1240,45 @@ def extract_text_from_docx(file_path):
         full_text.append(para.text)
     return '\n'.join(full_text)
 
-# Función para justificar texto
-def justify_text(text, width=80):
-    return "\n".join([fill(line, width=width) for line in text.split("\n")])
-
-# Función para buscar en los documentos y enviar la pregunta a ChatRTX
+# Función para buscar en documentos usando keyword matching (sin FAISS)
 def ask_IA_in_documents(question):
-    # Crear una lista de documentos Langchain
+    # Read all .docx files and do keyword-based relevance matching
     documents = []
     for filename in os.listdir(reports_dir):
         if filename.endswith(".docx"):
             file_path = os.path.join(reports_dir, filename)
-            text = extract_text_from_docx(file_path)
-            documents.append(LangchainDocument(page_content=text, metadata={"source": filename}))
+            try:
+                text = extract_text_from_docx(file_path)
+                documents.append({"source": filename, "content": text})
+            except Exception as e:
+                logger.error(f"Error reading {filename}: {e}")
 
-    # Procesar los documentos para Langchain
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=250)
-    texts = text_splitter.split_documents(documents)
+    if not documents:
+        return "No reports found in the Reports directory. Generate some reports first."
 
-    # Crear un vector store con LangChain usando FAISS y embeddings
-    embeddings = HuggingFaceEmbeddings()
-    vector_store = FAISS.from_documents(texts, embeddings)
-    
-    # Buscamos documentos relevantes
-    relevant_docs = vector_store.similarity_search(question)
+    # Simple keyword-based relevance scoring
+    question_words = set(re.sub(r'[^a-zA-Z\s]', '', question.lower()).split())
+    scored_docs = []
+    for doc in documents:
+        doc_words = set(re.sub(r'[^a-zA-Z\s]', '', doc["content"].lower()[:5000]).split())
+        score = len(question_words & doc_words) if question_words else 0
+        scored_docs.append((score, doc))
+    scored_docs.sort(key=lambda x: x[0], reverse=True)
+
+    # Take top 3 relevant documents
+    relevant = scored_docs[:3]
     combined_text = ""
     sources = set()
-    for doc in relevant_docs:
-        source = doc.metadata['source']
-        combined_text += f"Fuente: {source}\n{doc.page_content}\n\n"
-        sources.add(source)
-    
-    # Formatear texto justificado
-    justified_text = justify_text(combined_text)
-    
-    # Preguntamos a la IA de ChatRTX con el texto combinado de los documentos relevantes
-    response = ask_IA(justified_text + "\nGive me the most concrete answer possible, avoid being redundant: " + question)
+    for score, doc in relevant:
+        combined_text += f"Source: {doc['source']}\n{doc['content'][:3000]}\n\n"
+        sources.add(doc['source'])
+
+    if not combined_text.strip():
+        return "No relevant content found in reports."
+
+    # Query the LLM with the combined text
+    prompt = f"Based on the following report excerpts, answer the question concisely.\n\n{combined_text}\n\nQuestion: {question}\nAnswer:"
+    response = ask_IA(prompt)
     
     # Buscar el report_id para cada fuente y generar el enlace de descarga correcto
     if sources:
