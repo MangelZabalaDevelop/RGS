@@ -1,6 +1,35 @@
 let currentVuln = 0;
 let numVulns = 0;
 let vulnData = [];
+let csrfToken = '';
+
+/* ============================================================
+   CSRF TOKEN MANAGEMENT
+   ============================================================ */
+
+/**
+ * Fetch CSRF token from server on page load.
+ */
+function fetchCSRFToken() {
+    fetch('/csrf-token')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            csrfToken = data.csrf_token || '';
+        })
+        .catch(function(error) {
+            console.error('Failed to fetch CSRF token:', error);
+        });
+}
+
+/**
+ * Get standard fetch headers with CSRF token for POST/DELETE requests.
+ */
+function getAuthHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+    };
+}
 
 /* ============================================================
    SAFE DOM UTILITIES — replaces all innerHTML usage
@@ -781,6 +810,9 @@ document.getElementById('chat-clear').addEventListener('click', function() {
  * Shows/hides login form and app content accordingly.
  */
 function checkAuth() {
+    // Fetch CSRF token on every auth check
+    fetchCSRFToken();
+
     fetch('/auth/status')
         .then(function(response) { return response.json(); })
         .then(function(data) {

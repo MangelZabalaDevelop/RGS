@@ -379,6 +379,18 @@ def init_db():
                 report_path TEXT
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                user TEXT,
+                action TEXT NOT NULL,
+                resource_type TEXT,
+                resource_id TEXT,
+                details TEXT,
+                ip_address TEXT
+            )
+        ''')
         conn.commit()
 
 def migrate_db():
@@ -399,6 +411,27 @@ def migrate_db():
             cursor.execute('ALTER TABLE reports ADD COLUMN report_path TEXT')
 
         conn.commit()
+
+def log_audit_action(action, resource_type, resource_id, details='', user=None):
+    """Log an action to the audit_log table for traceability."""
+    try:
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO audit_log (timestamp, user, action, resource_type, resource_id, details, ip_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                datetime.now().isoformat(),
+                user or (current_user.username if current_user.is_authenticated else 'anonymous'),
+                action,
+                resource_type,
+                str(resource_id) if resource_id else None,
+                details,
+                request.remote_addr if request else None
+            ))
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to write audit log: {e}", exc_info=True)
 
 def join_queue(session_hash, set_fn_index, port, chatdata):
     #fn_indexes are some gradio generated indexes from rag/trt/ui/user_interface.py
@@ -582,7 +615,39 @@ def index():
 @app.route('/historical_analysis')
 @login_required
 def historical_analysis():
-    return render_template('historical_analysis.html')
+    """Historical analysis endpoint — returns JSON summary instead of missing template."""
+    try:
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+
+            # Get vulnerability statistics by risk level
+            cursor.execute('''
+                SELECT risk, COUNT(*) as count
+                FROM vulnerabilities
+                GROUP BY risk
+            ''')
+            risk_stats = {row[0]: row[1] for row in cursor.fetchall()}
+
+            # Get total counts
+            cursor.execute('SELECT COUNT(*) FROM vulnerabilities')
+            total_vulns = cursor.fetchone()[0]
+
+            cursor.execute('SELECT COUNT(*) FROM reports')
+            total_reports = cursor.fetchone()[0]
+
+            # Get unique clients
+            cursor.execute('SELECT DISTINCT client FROM vulnerabilities')
+            clients = [row[0] for row in cursor.fetchall()]
+
+        return jsonify({
+            'total_vulnerabilities': total_vulns,
+            'total_reports': total_reports,
+            'risk_distribution': risk_stats,
+            'clients': clients
+        })
+    except Exception as e:
+        logger.error(f"Error in /historical_analysis: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to load historical analysis'}), 500
 
 @app.route('/ask', methods=['POST'])
 @login_required
@@ -957,6 +1022,7 @@ def delete_vulnerability():
             cursor.execute('DELETE FROM vulnerabilities WHERE id = ?', (vuln_id,))
             conn.commit()
 
+        log_audit_action('DELETE', 'vulnerability', vuln_id, f'Vulnerability deleted')
         logger.info(f"Vulnerability {vuln_id} deleted by user {current_user.username}")
         return jsonify({'message': 'Vulnerability deleted successfully'})
     except Exception as e:
@@ -998,6 +1064,7 @@ def delete_report():
             cursor.execute('DELETE FROM reports WHERE id = ?', (report_id,))
             conn.commit()
 
+        log_audit_action('DELETE', 'report', report_id, f'Report deleted')
         logger.info(f"Report {report_id} deleted by user {current_user.username}")
         return jsonify({'message': 'Report deleted successfully'})
     except Exception as e:
