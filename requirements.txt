@@ -20,7 +20,7 @@ Flask-WTF==1.2.1
 fonttools==4.53.0
 frozenlist==1.4.1
 fsspec==2024.6.0
-greenlet==3.0.3
+greenlet==3.5.1
 huggingface-hub==0.23.3
 idna==3.7
 importlib_metadata==7.1.0
