@@ -19,7 +19,7 @@ Flask-Login==0.6.3
 Flask-WTF==1.2.1
 fonttools==4.53.0
 frozenlist==1.4.1
-fsspec==2024.6.0
+fsspec==2026.4.0
 greenlet==3.0.3
 huggingface-hub==0.23.3
 idna==3.7
