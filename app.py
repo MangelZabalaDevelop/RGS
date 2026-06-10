@@ -3,6 +3,12 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 import os
 import bcrypt
 import secrets
+import re
+import html
+import logging
+import time
+import uuid
+from functools import wraps
 from docx import Document
 from docx.shared import Inches, RGBColor
 from datetime import datetime
@@ -13,8 +19,6 @@ from docx.enum.section import WD_SECTION_START, WD_ORIENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import requests
-import random
-import string
 import json
 from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -22,6 +26,17 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.docstore.document import Document as LangchainDocument
 from textwrap import fill
 import dotenv
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('rgs_security.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('rgs.security')
 
 # Load environment variables from .env file if present
 dotenv.load_dotenv()
@@ -45,6 +60,217 @@ app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', '16777216
 
 # Database configuration
 DATABASE = 'vulnerabilities.db'
+
+# ============================================================
+# Security Utilities
+# ============================================================
+
+# --- Rate Limiting ---
+rate_limit_store = {}
+RATE_LIMIT_REQUESTS = 30
+RATE_LIMIT_WINDOW = 60  # seconds
+
+def rate_limit(max_requests=RATE_LIMIT_REQUESTS, window=RATE_LIMIT_WINDOW):
+    """Simple in-memory rate limiter decorator."""
+    def decorator(f):
+        @wraps(f)
+        def wrapped_function(*args, **kwargs):
+            client_ip = request.remote_addr
+            current_time = time.time()
+            
+            if client_ip not in rate_limit_store:
+                rate_limit_store[client_ip] = []
+            
+            # Remove old entries outside the window
+            rate_limit_store[client_ip] = [
+                t for t in rate_limit_store[client_ip]
+                if current_time - t < window
+            ]
+            
+            if len(rate_limit_store[client_ip]) >= max_requests:
+                logger.warning(f"Rate limit exceeded for {client_ip} on {request.path}")
+                return jsonify({'error': 'Rate limit exceeded. Try again later.'}), 429
+            
+            rate_limit_store[client_ip].append(current_time)
+            return f(*args, **kwargs)
+        return wrapped_function
+    return decorator
+
+# --- CSRF Protection ---
+def csrf_protect(f):
+    """CSRF protection decorator using session-based tokens."""
+    @wraps(f)
+    def wrapped_function(*args, **kwargs):
+        if request.method in ('POST', 'PUT', 'DELETE'):
+            csrf_token = request.headers.get('X-CSRF-Token')
+            session_token = session.get('_csrf_token')
+            
+            if not csrf_token or not session_token or csrf_token != session_token:
+                logger.warning(f"CSRF validation failed for {request.remote_addr} on {request.path}")
+                return jsonify({'error': 'CSRF token missing or invalid'}), 403
+        return f(*args, **kwargs)
+    return wrapped_function
+
+@app.before_request
+def generate_csrf_token():
+    """Generate CSRF token if not present in session."""
+    from flask import session
+    if '_csrf_token' not in session:
+        session['_csrf_token'] = secrets.token_hex(32)
+
+@app.route('/csrf-token', methods=['GET'])
+def csrf_token_endpoint():
+    """Endpoint to get CSRF token for AJAX requests."""
+    from flask import session
+    return jsonify({'csrf_token': session.get('_csrf_token', '')})
+
+# --- Input Validation ---
+MAX_FIELD_LENGTH = 10000
+MAX_VULN_NAME_LENGTH = 200
+MAX_CLIENT_LENGTH = 100
+MAX_VULNS_PER_REQUEST = 100
+
+def validate_string(value, max_length=MAX_FIELD_LENGTH, field_name='field'):
+    """Validate and sanitize a string input."""
+    if not isinstance(value, str):
+        return None, f"{field_name} must be a string"
+    if len(value) > max_length:
+        return None, f"{field_name} exceeds maximum length of {max_length}"
+    # Strip null bytes and control characters
+    sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', value)
+    return sanitized, None
+
+def validate_vulnerability_data(vuln):
+    """Validate a single vulnerability entry."""
+    required_fields = ['name', 'risk', 'priority', 'complexity', 'service', 'assets', 'description', 'impact', 'recommendations']
+    for field in required_fields:
+        if field not in vuln or not vuln[field]:
+            return None, f"Missing required field: {field}"
+    
+    name, err = validate_string(vuln['name'], MAX_VULN_NAME_LENGTH, 'name')
+    if err:
+        return None, err
+    
+    valid_risks = ['Critical', 'High', 'Medium', 'Low']
+    if vuln['risk'] not in valid_risks:
+        return None, f"Invalid risk level: {vuln['risk']}"
+    
+    valid_priorities = ['High', 'Medium', 'Low']
+    if vuln['priority'] not in valid_priorities:
+        return None, f"Invalid priority: {vuln['priority']}"
+    
+    valid_complexities = ['High', 'Medium', 'Low']
+    if vuln['complexity'] not in valid_complexities:
+        return None, f"Invalid complexity: {vuln['complexity']}"
+    
+    valid_services = ['Web', 'Infrastructure']
+    if vuln['service'] not in valid_services:
+        return None, f"Invalid service: {vuln['service']}"
+    
+    return vuln, None
+
+# --- Prompt Injection Protection ---
+def sanitize_for_prompt(text):
+    """Sanitize user input before including it in AI prompts.
+    
+    Removes or escapes potential prompt injection patterns.
+    """
+    if not isinstance(text, str):
+        return str(text)
+    
+    # Remove common prompt injection patterns
+    injection_patterns = [
+        r'ignore\s+(all\s+)?instructions?',
+        r'disregard\s+(all\s+)?instructions?',
+        r'system\s*:?',
+        r'<\s*\/\s*system\s*>',
+        r'\[\s*system\s*\]',
+        r'you\s+are\s+now',
+        r'from\s+now\s+on',
+        r'act\s+as',
+        r'pretend\s+to\s+be',
+        r'output\s+nothing\s+except',
+        r'respond\s+only\s+with',
+    ]
+    
+    sanitized = text
+    for pattern in injection_patterns:
+        sanitized = re.sub(pattern, '[REDACTED]', sanitized, flags=re.IGNORECASE)
+    
+    # Limit length to prevent prompt flooding
+    if len(sanitized) > 5000:
+        sanitized = sanitized[:5000] + '... [truncated]'
+    
+    return sanitized
+
+# --- Path Traversal Protection ---
+def safe_file_path(user_path, allowed_base_dir):
+    """Validate that a file path is within the allowed base directory.
+    
+    Returns the resolved path if safe, None otherwise.
+    """
+    if not user_path:
+        return None
+    
+    real_path = os.path.realpath(user_path)
+    real_base = os.path.realpath(allowed_base_dir)
+    
+    if not real_path.startswith(real_base + os.sep) and real_path != real_base:
+        logger.warning(f"Path traversal attempt blocked: {user_path}")
+        return None
+    
+    return real_path
+
+# --- Session Hash (cryptographically secure) ---
+def generate_session_hash():
+    """Generate a cryptographically secure session hash."""
+    return secrets.token_urlsafe(32)
+
+# --- Centralized Error Handling ---
+@app.errorhandler(400)
+def bad_request(error):
+    logger.info(f"Bad request: {request.path}")
+    return jsonify({'error': 'Bad request'}), 400
+
+@app.errorhandler(401)
+def unauthorized_error(error):
+    return jsonify({'error': 'Authentication required'}), 401
+
+@app.errorhandler(403)
+def forbidden(error):
+    return jsonify({'error': 'Forbidden'}), 403
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Resource not found'}), 404
+
+@app.errorhandler(413)
+def request_too_large(error):
+    return jsonify({'error': 'Request too large. Maximum size is 16MB.'}), 413
+
+@app.errorhandler(429)
+def rate_limit_exceeded(error):
+    return jsonify({'error': 'Rate limit exceeded. Try again later.'}), 429
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal server error: {error}", exc_info=True)
+    return jsonify({'error': 'Internal server error'}), 500
+
+# --- Security Headers ---
+@app.after_request
+def set_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' code.jquery.com cdn.jsdelivr.net stackpath.bootstrapcdn.com cdn.datatables.net unpkg.com; style-src 'self' 'unsafe-inline' stackpath.bootstrapcdn.com cdn.cloudflare.com cdn.datatables.net; img-src 'self' data:; font-src 'self' cdn.cloudflare.com;"
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    # Remove server header
+    response.headers.pop('Server', None)
+    return response
+
 
 # ============================================================
 # Authentication System
@@ -208,7 +434,7 @@ def listen_for_updates(session_hash, port):
 def ask_IA(message):
     global fn_index
 
-    session_hash = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    session_hash = generate_session_hash()
 
     chatdata = [[[message, None]], None]
     join_queue(session_hash, fn_index, port, chatdata)
@@ -360,17 +586,41 @@ def historical_analysis():
 
 @app.route('/ask', methods=['POST'])
 @login_required
+@rate_limit(max_requests=10, window=60)
 def ask():
     try:
         data = request.get_json()
-        num_vulns = int(data.get('num-vulns', 0))
-        vulnerabilities = data['vulnData']
-        client = data['client']
-        audit_date = data['audit_date']
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        
+        num_vulns = data.get('num-vulns', 0)
+        try:
+            num_vulns = int(num_vulns)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid number of vulnerabilities'}), 400
+        
+        if num_vulns <= 0 or num_vulns > MAX_VULNS_PER_REQUEST:
+            return jsonify({'error': f'Number of vulnerabilities must be between 1 and {MAX_VULNS_PER_REQUEST}'}), 400
+        
+        vulnerabilities = data.get('vulnData', [])
+        if not isinstance(vulnerabilities, list):
+            return jsonify({'error': 'Invalid vulnerability data'}), 400
+        
+        client, err = validate_string(data.get('client', ''), MAX_CLIENT_LENGTH, 'client')
+        if err or not client:
+            return jsonify({'error': err or 'Client name is required'}), 400
+        
+        audit_date = data.get('audit_date', '')
+        audit_date, err = validate_string(audit_date, 10, 'audit_date')
+        if err:
+            return jsonify({'error': err}), 400
         
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             for vulnerability in vulnerabilities:
+                validated, verr = validate_vulnerability_data(vulnerability)
+                if verr:
+                    return jsonify({'error': verr}), 400
                 cursor.execute('''
                     INSERT INTO vulnerabilities (name, risk, priority, complexity, service, assets, description, impact, recommendations, references_web, client, audit_date)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -384,7 +634,7 @@ def ask():
                     vulnerability['description'],
                     vulnerability['impact'],
                     vulnerability['recommendations'],
-                    vulnerability['references'],
+                    vulnerability.get('references', ''),
                     client,
                     audit_date
                 ))
@@ -394,25 +644,57 @@ def ask():
         response = f"Received and saved {len(vulnerabilities)} vulnerabilities."
         return jsonify({'response': response})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error in /ask: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to save vulnerabilities'}), 500
 
 @app.route('/generate_report', methods=['POST'])
 @login_required
+@rate_limit(max_requests=5, window=300)
 def generate_report():
     try:
         data = request.get_json()
-        num_vulns = int(data.get('num-vulns', 0))
-        vulnerabilities = data['vulnData']
-        client = data['client']
-        audit_date = data['audit_date']
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        
+        # Input validation
+        num_vulns = data.get('num-vulns', 0)
+        try:
+            num_vulns = int(num_vulns)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid number of vulnerabilities'}), 400
+        
+        if num_vulns <= 0 or num_vulns > MAX_VULNS_PER_REQUEST:
+            return jsonify({'error': f'Number of vulnerabilities must be between 1 and {MAX_VULNS_PER_REQUEST}'}), 400
+        
+        vulnerabilities = data.get('vulnData', [])
+        if not isinstance(vulnerabilities, list) or len(vulnerabilities) != num_vulns:
+            return jsonify({'error': 'Invalid vulnerability data'}), 400
+        
+        # Validate each vulnerability
+        for i, vuln in enumerate(vulnerabilities):
+            validated, err = validate_vulnerability_data(vuln)
+            if err:
+                return jsonify({'error': f'Vulnerability {i+1}: {err}'}), 400
+        
+        client, err = validate_string(data.get('client', ''), MAX_CLIENT_LENGTH, 'client')
+        if err:
+            return jsonify({'error': err}), 400
+        if not client:
+            return jsonify({'error': 'Client name is required'}), 400
+        
+        audit_date = data.get('audit_date', '')
+        audit_date, err = validate_string(audit_date, 10, 'audit_date')
+        if err:
+            return jsonify({'error': err}), 400
         
         # Create Reports folder if it doesn't exist
         reports_dir = os.path.join(os.path.dirname(__file__), 'Reports')
         os.makedirs(reports_dir, exist_ok=True)
         
-        # Generate file name
+        # Generate safe file name using UUID + sanitized client name
         current_date = datetime.now().strftime("%Y-%m-%d")
-        file_name = f"{client.upper()}_{current_date}.docx"
+        safe_client = re.sub(r'[^A-Za-z0-9_-]', '', client.upper())
+        file_name = f"{safe_client}_{current_date}_{uuid.uuid4().hex[:8]}.docx"
         file_path = os.path.join(reports_dir, file_name)
 
         document = Document()
@@ -437,24 +719,26 @@ def generate_report():
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
 
-        # Get the names of the vulnerabilities
-        vuln_names = ', '.join([v['name'] for v in vulnerabilities])
+        # Get the names of the vulnerabilities (sanitized for prompts)
+        vuln_names = ', '.join([sanitize_for_prompt(v['name']) for v in vulnerabilities])
+        safe_client = sanitize_for_prompt(client)
+        safe_audit_date = sanitize_for_prompt(audit_date)
 
-        # Generate introduction section
-        introduction = ask_IA(f"Generate an introduction about the vulnerability report in minimun 3 paragraphs, Include the cliente name: {client} and the audit date: {audit_date} . Never use titles, subtitles, everything should be paragraphs.")
+        # Generate introduction section (with prompt injection protection)
+        introduction = ask_IA(f"[TASK] Generate an introduction about a vulnerability report in minimum 3 paragraphs. [CLIENT] {safe_client} [DATE] {safe_audit_date} [INSTRUCTION] Never use titles or subtitles, everything should be paragraphs. [/TASK]")
         add_colored_heading(document, 'INTRODUCTION', level=1)
         add_formatted_paragraph(document, introduction)
         document.add_page_break()
 
-        # Generate executive summary
-        executive_summary_prompt = f"Generate an executive summary for a security audit for a non technical audience with this: {vuln_names} for the company: {client} and include the audit date: {audit_date}. summarize the results of these vulnerabilities in maximum 3 paragraphs. Never use titles, subtitles, everything should be paragraphs."
+        # Generate executive summary (with prompt injection protection)
+        executive_summary_prompt = f"[TASK] Generate an executive summary for a security audit for a non-technical audience. [VULNERABILITIES] {vuln_names} [CLIENT] {safe_client} [DATE] {safe_audit_date} [INSTRUCTION] Summarize in maximum 3 paragraphs. Never use titles or subtitles. [/TASK]"
         executive_summary = ask_IA(executive_summary_prompt)
         add_colored_heading(document, 'EXECUTIVE SUMMARY', level=1)
         add_formatted_paragraph(document, executive_summary)
         document.add_page_break()
 
-        # Generate technical summary
-        technical_summary_prompt = f"Generate a technical summary for a security audit with these vulnerabilities: {vuln_names} for the company: {client} and include the audit date: {audit_date}. summarize the results of these vulnerabilities in maximum 3 paragraphs. don't include titles, subtitles."
+        # Generate technical summary (with prompt injection protection)
+        technical_summary_prompt = f"[TASK] Generate a technical summary for a security audit. [VULNERABILITIES] {vuln_names} [CLIENT] {safe_client} [DATE] {safe_audit_date} [INSTRUCTION] Summarize in maximum 3 paragraphs. Do not include titles or subtitles. [/TASK]"
         technical_summary = ask_IA(technical_summary_prompt)
         add_colored_heading(document, 'TECHNICAL SUMMARY', level=1)
         add_formatted_paragraph(document, technical_summary)
@@ -510,22 +794,26 @@ def generate_report():
             add_table_with_headers(document, headers, data)
 
             add_colored_heading(document, 'Description', level=2)
-            technical_description_prompt = f"Analyze this text {vulnerability['description']}, improve its readability, expand general technical details and highlight the most relevant information. This is only the description of the vulnerability. Never use titles, subtitles, everything should be paragraphs."
+            safe_desc = sanitize_for_prompt(vulnerability['description'])
+            technical_description_prompt = f"[TASK] Improve the readability of the following vulnerability description, expand general technical details and highlight the most relevant information. [TEXT] {safe_desc} [/TEXT] [INSTRUCTION] Output only paragraphs, no titles or subtitles. [/TASK]"
             technical_description = ask_IA(technical_description_prompt)
             add_formatted_paragraph(document, technical_description)
 
             add_colored_heading(document, 'Impact', level=2)
-            technical_impact_prompt = f"Analyze this text {vulnerability['impact']}, improve its readability, expand general technical details and highlight the most relevant information. This is only the impact of the vulnerability. Never use titles, subtitles, everything should be paragraphs."
+            safe_impact = sanitize_for_prompt(vulnerability['impact'])
+            technical_impact_prompt = f"[TASK] Improve the readability of the following vulnerability impact description, expand general technical details and highlight the most relevant information. [TEXT] {safe_impact} [/TEXT] [INSTRUCTION] Output only paragraphs, no titles or subtitles. [/TASK]"
             technical_impact = ask_IA(technical_impact_prompt)
             add_formatted_paragraph(document, technical_impact)
 
             add_colored_heading(document, 'Recommendations', level=2)
-            technical_recommendations_prompt = f"Analyze this text {vulnerability['recommendations']}, improve its readability, create lists of punctual actions. This is only the recommendation of the vulnerability. Never use titles, subtitles, everything should be paragraphs."
+            safe_recs = sanitize_for_prompt(vulnerability['recommendations'])
+            technical_recommendations_prompt = f"[TASK] Improve the readability of the following vulnerability recommendations and create lists of punctual actions. [TEXT] {safe_recs} [/TEXT] [INSTRUCTION] Output only paragraphs and lists, no titles or subtitles. [/TASK]"
             technical_recommendations = ask_IA(technical_recommendations_prompt)
             add_formatted_paragraph(document, technical_recommendations)
 
             add_colored_heading(document, 'References', level=2)
-            technical_references_prompt = f"create list of links of reference including: {vulnerability['references']}, don't add additional text, just links."
+            safe_refs = sanitize_for_prompt(vulnerability.get('references', ''))
+            technical_references_prompt = f"[TASK] Create a list of reference links. [REFERENCES] {safe_refs} [/REFERENCES] [INSTRUCTION] Output only links, no additional text. [/TASK]"
             technical_references = ask_IA(technical_references_prompt)
             add_formatted_paragraph(document, technical_references)
             document.add_page_break()
@@ -552,23 +840,48 @@ def generate_report():
             ))
             conn.commit()
 
-        return jsonify({'message': 'Report generated successfully', 'report_path': file_path})
+        return jsonify({'message': 'Report generated successfully'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error generating report: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to generate report'}), 500
 
 @app.route('/submit_vulnerabilities', methods=['POST'])
 @login_required
+@rate_limit(max_requests=10, window=60)
 def submit_vulnerabilities():
     try:
         data = request.get_json()
-        num_vulns = int(data.get('num-vulns', 0))
-        vulnerabilities = data['vulnData']
-        client = data['client']
-        audit_date = data['audit_date']
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        
+        num_vulns = data.get('num-vulns', 0)
+        try:
+            num_vulns = int(num_vulns)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid number of vulnerabilities'}), 400
+        
+        if num_vulns <= 0 or num_vulns > MAX_VULNS_PER_REQUEST:
+            return jsonify({'error': f'Number of vulnerabilities must be between 1 and {MAX_VULNS_PER_REQUEST}'}), 400
+        
+        vulnerabilities = data.get('vulnData', [])
+        if not isinstance(vulnerabilities, list):
+            return jsonify({'error': 'Invalid vulnerability data'}), 400
+        
+        client, err = validate_string(data.get('client', ''), MAX_CLIENT_LENGTH, 'client')
+        if err or not client:
+            return jsonify({'error': err or 'Client name is required'}), 400
+        
+        audit_date = data.get('audit_date', '')
+        audit_date, err = validate_string(audit_date, 10, 'audit_date')
+        if err:
+            return jsonify({'error': err}), 400
 
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             for vulnerability in vulnerabilities:
+                validated, verr = validate_vulnerability_data(vulnerability)
+                if verr:
+                    return jsonify({'error': verr}), 400
                 cursor.execute('''
                     INSERT INTO vulnerabilities (name, risk, priority, complexity, service, assets, description, impact, recommendations, references_web, client, audit_date)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -582,7 +895,7 @@ def submit_vulnerabilities():
                     vulnerability['description'],
                     vulnerability['impact'],
                     vulnerability['recommendations'],
-                    vulnerability['references'],
+                    vulnerability.get('references', ''),
                     client,
                     audit_date
                 ))
@@ -591,7 +904,8 @@ def submit_vulnerabilities():
         response = f"Received and saved {len(vulnerabilities)} vulnerabilities."
         return jsonify({'response': response})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error in /submit_vulnerabilities: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to save vulnerabilities'}), 500
 
 @app.route('/list_vulnerabilities', methods=['GET'])
 @login_required
@@ -600,17 +914,17 @@ def list_vulnerabilities():
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT name, MAX(id) AS id, risk 
-                FROM vulnerabilities 
-                GROUP BY name 
+                SELECT name, MAX(id) AS id, risk
+                FROM vulnerabilities
+                GROUP BY name
                 HAVING COUNT(name) = 1
                 UNION ALL
-                SELECT name, MAX(id) AS id, risk 
-                FROM vulnerabilities 
+                SELECT name, MAX(id) AS id, risk
+                FROM vulnerabilities
                 WHERE name IN (
-                    SELECT name 
-                    FROM vulnerabilities 
-                    GROUP BY name 
+                    SELECT name
+                    FROM vulnerabilities
+                    GROUP BY name
                     HAVING COUNT(name) > 1
                 )
                 GROUP BY name
@@ -621,23 +935,33 @@ def list_vulnerabilities():
         vulnerabilities = [{'id': row[1], 'name': row[0], 'risk': row[2]} for row in rows]
         return jsonify({'vulnerabilities': vulnerabilities})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error in /list_vulnerabilities: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to list vulnerabilities'}), 500
 
 @app.route('/delete_vulnerability', methods=['POST'])
 @login_required
 def delete_vulnerability():
     try:
         data = request.get_json()
+        if not data or 'id' not in data:
+            return jsonify({'error': 'Missing vulnerability ID'}), 400
+        
         vuln_id = data.get('id')
+        try:
+            vuln_id = int(vuln_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid vulnerability ID'}), 400
         
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute('DELETE FROM vulnerabilities WHERE id = ?', (vuln_id,))
             conn.commit()
 
+        logger.info(f"Vulnerability {vuln_id} deleted by user {current_user.username}")
         return jsonify({'message': 'Vulnerability deleted successfully'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error deleting vulnerability: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to delete vulnerability'}), 500
 
 @app.route('/list_reports', methods=['GET'])
 @login_required
@@ -648,100 +972,131 @@ def list_reports():
             cursor.execute('SELECT id, client, num_vulnerabilities, generation_date, report_path FROM reports')
             rows = cursor.fetchall()
 
-        reports = [{'id': row[0], 'client': row[1], 'num_vulnerabilities': row[2], 'generation_date': row[3], 'report_path': row[4]} for row in rows]
+        # Do not expose report_path (absolute file paths) to the client
+        reports = [{'id': row[0], 'client': row[1], 'num_vulnerabilities': row[2], 'generation_date': row[3]} for row in rows]
         return jsonify({'reports': reports})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error listing reports: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to list reports'}), 500
 
 @app.route('/delete_report', methods=['POST'])
 @login_required
 def delete_report():
     try:
         data = request.get_json()
+        if not data or 'id' not in data:
+            return jsonify({'error': 'Missing report ID'}), 400
+        
         report_id = data.get('id')
+        try:
+            report_id = int(report_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid report ID'}), 400
         
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute('DELETE FROM reports WHERE id = ?', (report_id,))
             conn.commit()
 
+        logger.info(f"Report {report_id} deleted by user {current_user.username}")
         return jsonify({'message': 'Report deleted successfully'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error deleting report: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to delete report'}), 500
 
-# Actualizamos esta ruta para usar el `report_id`
+# Download report with path traversal protection
 @app.route('/download_report/<int:report_id>', methods=['GET'])
 @login_required
 def download_report(report_id):
     try:
+        reports_dir = os.path.join(os.path.dirname(__file__), 'Reports')
+        
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT report_path FROM reports WHERE id = ?', (report_id,))
             row = cursor.fetchone()
 
-        if row:
-            file_path = row[0]
-            print(f"Trying to download file at path: {file_path}")  # Debugging: Check the file path
-
-            # Verificar si el archivo existe en la ruta obtenida
-            if os.path.exists(file_path):
-                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
-            else:
-                print(f"File not found at path: {file_path}")  # Debugging: File not found
-                return jsonify({'error': 'Report not found or path is empty'}), 404
-        else:
-            return jsonify({'error': 'Report ID not found'}), 404
+        if not row or not row[0]:
+            return jsonify({'error': 'Report not found'}), 404
+        
+        file_path = row[0]
+        
+        # Path traversal protection: ensure the file is within Reports directory
+        safe_path = safe_file_path(file_path, reports_dir)
+        if not safe_path:
+            logger.warning(f"Path traversal attempt blocked for report_id={report_id}: {file_path}")
+            return jsonify({'error': 'Invalid report path'}), 403
+        
+        if not os.path.exists(safe_path):
+            logger.info(f"Report file not found: {safe_path}")
+            return jsonify({'error': 'Report file not found on disk'}), 404
+        
+        # Use only the basename for the download name to avoid path leakage
+        download_name = os.path.basename(safe_path)
+        return send_file(safe_path, as_attachment=True, download_name=download_name)
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error downloading report {report_id}: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to download report'}), 500
 
 @app.route('/suggest_vulnerabilities', methods=['GET'])
 @login_required
+@rate_limit(max_requests=20, window=10)
 def suggest_vulnerabilities():
     query = request.args.get('query', '')
+    query, err = validate_string(query, 200, 'query')
+    if err:
+        return jsonify({'error': err}), 400
     try:
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT name 
+                SELECT name
                 FROM (
-                    SELECT name, MAX(id) AS id 
-                    FROM vulnerabilities 
-                    GROUP BY name 
+                    SELECT name, MAX(id) AS id
+                    FROM vulnerabilities
+                    GROUP BY name
                     HAVING COUNT(name) = 1
                     UNION ALL
-                    SELECT name, MAX(id) AS id 
-                    FROM vulnerabilities 
+                    SELECT name, MAX(id) AS id
+                    FROM vulnerabilities
                     WHERE name IN (
-                        SELECT name 
-                        FROM vulnerabilities 
-                        GROUP BY name 
+                        SELECT name
+                        FROM vulnerabilities
+                        GROUP BY name
                         HAVING COUNT(name) > 1
                     )
                     GROUP BY name
-                ) 
-                WHERE name LIKE ? 
+                )
+                WHERE name LIKE ?
                 ORDER BY name
+                LIMIT 50
             """, ('%' + query + '%',))
             rows = cursor.fetchall()
-        
+
         suggestions = [row[0] for row in rows]
         return jsonify({'suggestions': suggestions})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error in /suggest_vulnerabilities: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to get suggestions'}), 500
 
 @app.route('/search_vulnerability', methods=['POST'])
 @login_required
 def search_vulnerability():
     data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Invalid request data'}), 400
     name = data.get('name', '')
+    name, err = validate_string(name, MAX_VULN_NAME_LENGTH, 'name')
+    if err:
+        return jsonify({'error': err}), 400
     try:
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT name, risk, priority, complexity, service, assets, description, impact, recommendations, references_web 
-                FROM vulnerabilities 
-                WHERE name = ? 
-                ORDER BY id DESC 
+                SELECT name, risk, priority, complexity, service, assets, description, impact, recommendations, references_web
+                FROM vulnerabilities
+                WHERE name = ?
+                ORDER BY id DESC
                 LIMIT 1
             ''', (name,))
             row = cursor.fetchone()
@@ -763,7 +1118,8 @@ def search_vulnerability():
         else:
             return jsonify({'vulnerability': None})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error in /search_vulnerability: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to search vulnerability'}), 500
 
 @app.route('/get_vulnerability/<int:vuln_id>', methods=['GET'])
 @login_required
@@ -772,7 +1128,7 @@ def get_vulnerability(vuln_id):
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT name, risk, priority, complexity, service, assets, description, impact, recommendations, references_web 
+                SELECT name, risk, priority, complexity, service, assets, description, impact, recommendations, references_web
                 FROM vulnerabilities WHERE id = ?
             ''', (vuln_id,))
             row = cursor.fetchone()
@@ -794,8 +1150,9 @@ def get_vulnerability(vuln_id):
         else:
             return jsonify({'vulnerability': None})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
-    
+        logger.error(f"Error in /get_vulnerability: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to get vulnerability'}), 500
+
 @app.route('/unique_clients', methods=['GET'])
 @login_required
 def unique_clients():
@@ -807,7 +1164,8 @@ def unique_clients():
         clients = [row[0] for row in rows]
         return jsonify({'clients': clients})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error in /unique_clients: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to get clients'}), 500
 
 ## RAG ANALYSIS
 
@@ -879,17 +1237,25 @@ def ask_IA_in_documents(question):
 
 @app.route('/ask_in_documents', methods=['POST'])
 @login_required
+@rate_limit(max_requests=5, window=60)
 def ask_in_documents():
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
         question = data.get('question')
         if not question:
             return jsonify({'error': 'No question provided'}), 400
         
+        question, err = validate_string(question, 2000, 'question')
+        if err:
+            return jsonify({'error': err}), 400
+        
         response = ask_IA_in_documents(question)
         return jsonify({'response': response})
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error in /ask_in_documents: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to process question'}), 500
 
 if __name__ == '__main__':
     init_db()

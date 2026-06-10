@@ -771,3 +771,112 @@ document.getElementById('chat-clear').addEventListener('click', function() {
     var chatBox = document.getElementById('chat-box');
     clearElement(chatBox);
 });
+
+/* ============================================================
+   AUTHENTICATION FUNCTIONS
+   ============================================================ */
+
+/**
+ * Check authentication status on page load.
+ * Shows/hides login form and app content accordingly.
+ */
+function checkAuth() {
+    fetch('/auth/status')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var authSection = document.getElementById('auth-section');
+            var appContent = document.getElementById('app-content');
+            var logoutBtn = document.getElementById('logout-btn');
+            if (data.authenticated) {
+                if (authSection) authSection.style.display = 'none';
+                if (appContent) appContent.style.display = 'block';
+                if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            } else {
+                if (authSection) authSection.style.display = 'block';
+                if (appContent) appContent.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+        })
+        .catch(function(error) {
+            console.error('Auth check failed:', error);
+        });
+}
+
+/**
+ * Login with username and password.
+ */
+function doLogin() {
+    var username = document.getElementById('login-username').value;
+    var password = document.getElementById('login-password').value;
+    var errorDiv = document.getElementById('login-error');
+    errorDiv.textContent = '';
+
+    fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+    })
+    .then(function(response) { return response.json().then(function(data) { return { status: response.status, data: data }; }); })
+    .then(function(result) {
+        if (result.status === 200) {
+            checkAuth();
+            listVulnerabilities();
+            listReports();
+        } else {
+            errorDiv.textContent = result.data.error || 'Login failed';
+        }
+    })
+    .catch(function(error) {
+        errorDiv.textContent = 'Connection error: ' + error;
+    });
+}
+
+/**
+ * Logout current user.
+ */
+function doLogout() {
+    fetch('/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        checkAuth();
+    })
+    .catch(function(error) {
+        console.error('Logout failed:', error);
+    });
+}
+
+/**
+ * Global fetch interceptor — handles 401 responses.
+ */
+var originalFetch = window.fetch;
+window.fetch = function() {
+    return originalFetch.apply(this, arguments).then(function(response) {
+        if (response.status === 401) {
+            response.json().then(function(data) {
+                console.warn('Authentication required:', data.error);
+            }).catch(function() {});
+            var authSection = document.getElementById('auth-section');
+            var appContent = document.getElementById('app-content');
+            if (authSection) authSection.style.display = 'block';
+            if (appContent) appContent.style.display = 'none';
+        }
+        return response;
+    });
+};
+
+/**
+ * Handle Enter key in login password field.
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    var passwordField = document.getElementById('login-password');
+    if (passwordField) {
+        passwordField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                doLogin();
+            }
+        });
+    }
+});
