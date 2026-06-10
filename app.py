@@ -434,6 +434,10 @@ def log_audit_action(action, resource_type, resource_id, details='', user=None):
 
 def ask_IA(message):
     """Query the LLM via OpenAI-compatible API (vLLM/Ollama)."""
+    # Log what we're asking (first 100 chars for progress tracking)
+    preview = message[:100].replace('\n', ' ')
+    logger.info(f"LLM REQUEST START: '{preview}...'")
+    start_time = time.time()
     try:
         response = requests.post(
             f"{LLM_BASE_URL}/chat/completions",
@@ -447,19 +451,24 @@ def ask_IA(message):
                     {"role": "system", "content": "You are a security audit report assistant. Provide clear, professional, and detailed responses."},
                     {"role": "user", "content": message}
                 ],
-                "max_tokens": 2048,
+                "max_tokens": 4096,
                 "temperature": 0.7
             },
-            timeout=120
+            timeout=600  # 10 min per call; report gen makes 10+ sequential LLM calls
         )
+        elapsed = time.time() - start_time
         response.raise_for_status()
         data = response.json()
-        return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        msg = data.get("choices", [{}])[0].get("message", {})
+        content = msg.get("content") or msg.get("reasoning") or ""
+        logger.info(f"LLM REQUEST DONE in {elapsed:.1f}s: '{(content or 'empty')[:80]}...'")
+        return content or ""
     except requests.exceptions.ConnectionError:
         logger.error(f"Cannot connect to LLM at {LLM_BASE_URL}")
         return f"[LLM unavailable at {LLM_BASE_URL}. Check configuration.]"
     except requests.exceptions.Timeout:
-        logger.error("LLM request timed out")
+        elapsed = time.time() - start_time
+        logger.error(f"LLM request timed out after {elapsed:.1f}s")
         return "[LLM request timed out. Please try again.]"
     except Exception as e:
         logger.error(f"LLM error: {e}", exc_info=True)
