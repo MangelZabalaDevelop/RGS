@@ -64,7 +64,7 @@ scikit-learn==1.5.0
 scipy==1.13.1
 sentence-transformers==3.0.0
 six==1.16.0
-SQLAlchemy==2.0.30
+SQLAlchemy==2.0.50
 sympy==1.12.1
 tbb==2021.12.0
 tenacity==8.3.0
