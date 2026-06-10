@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  rgs:
+    build: .
+    container_name: rgs-app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_DEBUG=false
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5000
+      - SESSION_COOKIE_SECURE=false
+    volumes:
+      - reports_data:/app/Reports
+      - logs_data:/app/logs
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+
+volumes:
+  reports_data:
+  logs_data:

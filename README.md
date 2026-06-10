@@ -176,6 +176,53 @@ Experience the full potential of the **Report Generative Security Tool (RGS)** t
 For a detailed walkthrough, watch our [YouTube video](https://www.youtube.com/watch?v=j4wibVN09cI) demonstrating the RGS tool deployment and his power in action.
 
 
+## SECURITY
+
+### Environment Configuration
+
+Before running the application, configure environment variables:
+
+1. Copy `.env.example` to `.env`:
+    ```bash
+    copy .env.example .env
+    ```
+2. Edit `.env` and set your own values:
+    - `SECRET_KEY`: Generate a random key (e.g., `python -c "import secrets; print(secrets.token_hex(32))"`)
+    - `ADMIN_USERNAME`: Your admin username
+    - `ADMIN_PASSWORD`: Your admin password (will be hashed with bcrypt)
+    - `CHATRTX_*`: Paths to your ChatRTX certificates
+
+### Security Features
+
+This project implements the following security measures:
+
+- **Authentication**: Flask-Login with bcrypt password hashing
+- **Input Validation**: All inputs validated and sanitized before processing
+- **XSS Protection**: Safe DOM manipulation (no innerHTML usage)
+- **Path Traversal Protection**: File operations validated against allowed directories
+- **Prompt Injection Protection**: AI prompts sanitized and structured with delimiters
+- **Rate Limiting**: All endpoints protected against abuse
+- **Security Headers**: CSP, X-Frame-Options, X-Content-Type-Options, and more
+- **SRI Hashes**: All CDN resources verified with Subresource Integrity
+- **Secure Sessions**: Cryptographically secure session management
+- **Error Handling**: Centralized error handling with no information leakage
+- **No Hardcoded Secrets**: All sensitive configuration via environment variables
+
+### Docker Deployment
+
+For production deployment, use Docker:
+
+```bash
+docker-compose up -b
+```
+
+The Docker image runs as a non-root user with read-only filesystem and minimal privileges.
+
+### Reporting Vulnerabilities
+
+See [SECURITY.md](SECURITY.md) for responsible disclosure guidelines.
+
+
 ## License
 
 This project is open-source and licensed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain.

@@ -1,0 +1,58 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install bandit safety pip-audit
+
+      - name: Run Bandit (SAST)
+        run: |
+          bandit -r app.py -ll -ii -f json -o bandit-report.json || true
+          bandit -r app.py -ll -ii
+
+      - name: Run pip-audit (dependency check)
+        run: |
+          pip-audit -r requirements.txt || true
+
+      - name: Check for committed secrets
+        run: |
+          pip install gitleaks
+          gitleaks detect --report-format json --report-path gitleaks-report.json || true
+
+      - name: Check for sensitive files
+        run: |
+          echo "Checking for sensitive files..."
+          if [ -f "vulnerabilities.db" ]; then
+            echo "ERROR: vulnerabilities.db should not be in repository"
+            exit 1
+          fi
+          if [ -d "Reports" ] && [ "$(ls -A Reports 2>/dev/null)" ]; then
+            echo "ERROR: Reports/ should not contain files in repository"
+            exit 1
+          fi
+          echo "No sensitive files found."
