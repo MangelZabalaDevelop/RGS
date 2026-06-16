@@ -370,9 +370,7 @@ function submitAllVulns() {
 
     fetch('/submit_vulnerabilities', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ 'num-vulns': numVulns, 'vulnData': vulnData, 'client': client, 'audit_date': audit_date })
     })
     .then(response => response.json())
@@ -402,9 +400,7 @@ function generateReport() {
 
     fetch('/generate_report', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ 'num-vulns': numVulns, 'vulnData': vulnData, 'client': client, 'audit_date': audit_date })
     })
     .then(response => response.json())
@@ -467,9 +463,7 @@ function suggestVulnerabilities(query) {
 function loadVulnerability(name) {
     fetch('/search_vulnerability', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ name: name })
     })
     .then(response => response.json())
@@ -619,9 +613,7 @@ function viewVulnerability(id) {
 function deleteVulnerability(id) {
     fetch('/delete_vulnerability', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id: id })
     })
     .then(response => response.json())
@@ -724,9 +716,7 @@ function listReports() {
 function deleteReport(id) {
     fetch('/delete_report', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id: id })
     })
     .then(response => response.json())
@@ -769,9 +759,7 @@ document.getElementById('chat-send').addEventListener('click', function() {
 
         fetch('/ask_in_documents', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ question: chatInput })
         })
         .then(response => response.json())
@@ -869,7 +857,7 @@ function doLogin() {
 function doLogout() {
     fetch('/logout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: getAuthHeaders()
     })
     .then(function(response) { return response.json(); })
     .then(function(data) {

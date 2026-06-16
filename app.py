@@ -101,6 +101,7 @@ def csrf_protect(f):
     @wraps(f)
     def wrapped_function(*args, **kwargs):
         if request.method in ('POST', 'PUT', 'DELETE'):
+            from flask import session
             csrf_token = request.headers.get('X-CSRF-Token')
             session_token = session.get('_csrf_token')
             
@@ -266,9 +267,24 @@ def set_security_headers(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
-    # Remove server header
-    response.headers.pop('Server', None)
     return response
+
+
+# ============================================================
+# WSGI Middleware — Remove Server header (Werkzeug adds it after after_request)
+# ============================================================
+
+class RemoveServerHeaderMiddleware:
+    """WSGI middleware that strips the Server header from all responses."""
+    def __init__(self, app):
+        self.app = app
+    def __call__(self, environ, start_response):
+        def custom_start_response(status, headers, exc_info=None):
+            headers = [(name, value) for name, value in headers if name.lower() != 'server']
+            return start_response(status, headers, exc_info)
+        return self.app(environ, custom_start_response)
+
+app.wsgi_app = RemoveServerHeaderMiddleware(app.wsgi_app)
 
 
 # ============================================================
@@ -339,6 +355,7 @@ def login():
 
 @app.route('/logout', methods=['POST'])
 @login_required
+@csrf_protect
 def logout():
     logout_user()
     return jsonify({'message': 'Logout successful'})
@@ -653,6 +670,7 @@ def historical_analysis():
 @app.route('/ask', methods=['POST'])
 @login_required
 @rate_limit(max_requests=10, window=60)
+@csrf_protect
 def ask():
     try:
         data = request.get_json()
@@ -716,6 +734,7 @@ def ask():
 @app.route('/generate_report', methods=['POST'])
 @login_required
 @rate_limit(max_requests=5, window=300)
+@csrf_protect
 def generate_report():
     try:
         data = request.get_json()
@@ -914,6 +933,7 @@ def generate_report():
 @app.route('/submit_vulnerabilities', methods=['POST'])
 @login_required
 @rate_limit(max_requests=10, window=60)
+@csrf_protect
 def submit_vulnerabilities():
     try:
         data = request.get_json()
@@ -1006,6 +1026,7 @@ def list_vulnerabilities():
 
 @app.route('/delete_vulnerability', methods=['POST'])
 @login_required
+@csrf_protect
 def delete_vulnerability():
     try:
         data = request.get_json()
@@ -1048,6 +1069,7 @@ def list_reports():
 
 @app.route('/delete_report', methods=['POST'])
 @login_required
+@csrf_protect
 def delete_report():
     try:
         data = request.get_json()
@@ -1149,6 +1171,7 @@ def suggest_vulnerabilities():
 
 @app.route('/search_vulnerability', methods=['POST'])
 @login_required
+@csrf_protect
 def search_vulnerability():
     data = request.get_json()
     if not data:
@@ -1309,6 +1332,7 @@ def ask_IA_in_documents(question):
 @app.route('/ask_in_documents', methods=['POST'])
 @login_required
 @rate_limit(max_requests=5, window=60)
+@csrf_protect
 def ask_in_documents():
     try:
         data = request.get_json()
