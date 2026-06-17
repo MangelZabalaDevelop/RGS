@@ -465,7 +465,7 @@ def ask_IA(message):
             json={
                 "model": LLM_MODEL,
                 "messages": [
-                    {"role": "system", "content": "You are a security audit report assistant. Provide clear, professional, and detailed responses."},
+                    {"role": "system", "content": "Eres un asistente experto en auditorias de seguridad. Proporciona respuestas claras, profesionales y detalladas. Responde SIEMPRE en el mismo idioma que el texto de entrada del usuario. Si el usuario escribe en espanol, responde en espanol. Si escribe en ingles, responde en ingles. No mezcles idiomas."},
                     {"role": "user", "content": message}
                 ],
                 "max_tokens": 4096,
@@ -588,7 +588,7 @@ def generate_risk_analysis_paragraph(vulnerabilities):
             risk_counts[vuln['risk']] += 1
 
     risk_summary = ", ".join([f"{count} {level}" for level, count in risk_counts.items()])
-    prompt = f"Analyze the following risk density data: {risk_summary}. Provide an explanation of the distribution and significance of these results. Don't include titles or lists. Write in two paragraphs."
+    prompt = f"Analiza los siguientes datos de densidad de riesgo: {risk_summary}. Proporciona una explicacion de la distribucion y el significado de estos resultados. No incluyas titulos ni listas. Escribe en dos parrafos. Responde en el mismo idioma que los datos de entrada."
     
     analysis = ask_IA(prompt)
     return analysis
@@ -602,7 +602,7 @@ def generate_priority_analysis_paragraph(vulnerabilities):
             priority_counts[vuln['priority']] += 1
 
     priority_summary = ", ".join([f"{count} {level}" for level, count in priority_counts.items()])
-    prompt = f"Analyze the following priority density data: {priority_summary}. Provide an explanation of the distribution and significance of these results. Don't include titles or lists. Write in two paragraphs."
+    prompt = f"Analiza los siguientes datos de densidad de prioridad: {priority_summary}. Proporciona una explicacion de la distribucion y el significado de estos resultados. No incluyas titulos ni listas. Escribe en dos parrafos. Responde en el mismo idioma que los datos de entrada."
     
     analysis = ask_IA(prompt)
     return analysis
@@ -616,7 +616,7 @@ def generate_complexity_analysis_paragraph(vulnerabilities):
             complexity_counts[vuln['complexity']] += 1
 
     complexity_summary = ", ".join([f"{count} {level}" for level, count in complexity_counts.items()])
-    prompt = f"Analyze the following remediation complexity density data: {complexity_summary}. Provide an explanation of the distribution and significance of these results. Don't include titles or lists. Write in two paragraphs."
+    prompt = f"Analiza los siguientes datos de densidad de complejidad de remediacion: {complexity_summary}. Proporciona una explicacion de la distribucion y el significado de estos resultados. No incluyas titulos ni listas. Escribe en dos parrafos. Responde en el mismo idioma que los datos de entrada."
     
     analysis = ask_IA(prompt)
     return analysis
@@ -810,28 +810,28 @@ def generate_report():
         safe_audit_date = sanitize_for_prompt(audit_date)
 
         # Generate introduction section (with prompt injection protection)
-        introduction = ask_IA(f"[TASK] Generate an introduction about a vulnerability report in minimum 3 paragraphs. [CLIENT] {safe_client} [DATE] {safe_audit_date} [INSTRUCTION] Never use titles or subtitles, everything should be paragraphs. [/TASK]")
-        add_colored_heading(document, 'INTRODUCTION', level=1)
+        introduction = ask_IA(f"Genera una introduccion para un informe de auditoria de seguridad. [CLIENTE] {safe_client} [FECHA] {safe_audit_date} [INSTRUCCION] Escribe minimo 3 parrafos. No uses titulos ni subtitulos, solo parrafos. Responde en el mismo idioma que los datos del cliente.")
+        add_colored_heading(document, 'INTRODUCCION', level=1)
         add_formatted_paragraph(document, introduction)
         document.add_page_break()
 
         # Generate executive summary (with prompt injection protection)
-        executive_summary_prompt = f"[TASK] Generate an executive summary for a security audit for a non-technical audience. [VULNERABILITIES] {vuln_names} [CLIENT] {safe_client} [DATE] {safe_audit_date} [INSTRUCTION] Summarize in maximum 3 paragraphs. Never use titles or subtitles. [/TASK]"
+        executive_summary_prompt = f"Genera un resumen ejecutivo para una auditoria de seguridad dirigido a una audiencia no tecnica. [VULNERABILIDADES] {vuln_names} [CLIENTE] {safe_client} [FECHA] {safe_audit_date} [INSTRUCCION] Resume en maximo 3 parrafos. No uses titulos ni subtitulos. Responde en el mismo idioma que los datos del cliente."
         executive_summary = ask_IA(executive_summary_prompt)
-        add_colored_heading(document, 'EXECUTIVE SUMMARY', level=1)
+        add_colored_heading(document, 'RESUMEN EJECUTIVO', level=1)
         add_formatted_paragraph(document, executive_summary)
         document.add_page_break()
 
         # Generate technical summary (with prompt injection protection)
-        technical_summary_prompt = f"[TASK] Generate a technical summary for a security audit. [VULNERABILITIES] {vuln_names} [CLIENT] {safe_client} [DATE] {safe_audit_date} [INSTRUCTION] Summarize in maximum 3 paragraphs. Do not include titles or subtitles. [/TASK]"
+        technical_summary_prompt = f"Genera un resumen tecnico para una auditoria de seguridad. [VULNERABILIDADES] {vuln_names} [CLIENTE] {safe_client} [FECHA] {safe_audit_date} [INSTRUCCION] Resume en maximo 3 parrafos. No incluyas titulos ni subtitulos. Responde en el mismo idioma que los datos del cliente."
         technical_summary = ask_IA(technical_summary_prompt)
-        add_colored_heading(document, 'TECHNICAL SUMMARY', level=1)
+        add_colored_heading(document, 'RESUMEN TECNICO', level=1)
         add_formatted_paragraph(document, technical_summary)
         document.add_page_break()
 
         # Generate and insert risk density chart
-        add_colored_heading(document, 'RISK ANALYSIS', level=1)
-        paragraph = document.add_paragraph("The chart illustrates the distribution of identified vulnerabilities across different risk levels: critical, high, medium, and low. Each bar's height corresponds to the number of vulnerabilities within its respective risk category. This analysis provides a clear overview of the security posture, highlighting the concentration of vulnerabilities by severity and aiding in prioritizing remediation efforts.")
+        add_colored_heading(document, 'ANALISIS DE RIESGO', level=1)
+        paragraph = document.add_paragraph("El grafico ilustra la distribucion de las vulnerabilidades identificadas segun su nivel de riesgo: critico, alto, medio y bajo. La altura de cada barra corresponde al numero de vulnerabilidades en cada categoria. Este analisis proporciona una vision clara de la postura de seguridad, destacando la concentracion de vulnerabilidades por severidad y ayudando a priorizar los esfuerzos de remediacion.")
         risk_chart_path = os.path.join(reports_dir, 'risk_density_chart.png')
         generate_risk_density_chart(vulnerabilities, risk_chart_path)
         document.add_picture(risk_chart_path, width=Inches(6))
@@ -842,8 +842,8 @@ def generate_report():
         document.add_page_break()
 
         # Generate and insert priority density chart
-        add_colored_heading(document, 'PRIORITY ANALYSIS', level=1)
-        paragraph = document.add_paragraph("The chart depicts the density of vulnerabilities based on their priority levels: critical, high, medium, and low. The height of each bar represents the number of vulnerabilities identified within each priority category. This analysis aids in understanding the prioritization of vulnerabilities, which is crucial for efficient resource allocation and effective remediation strategies.")
+        add_colored_heading(document, 'ANALISIS DE PRIORIDAD', level=1)
+        paragraph = document.add_paragraph("El grafico muestra la densidad de vulnerabilidades segun su nivel de prioridad: critico, alto, medio y bajo. La altura de cada barra representa el numero de vulnerabilidades identificadas en cada categoria. Este analisis ayuda a comprender la priorizacion de las vulnerabilidades, crucial para la asignacion eficiente de recursos y estrategias de remediacion efectivas.")
         priority_chart_path = os.path.join(reports_dir, 'priority_density_chart.png')
         generate_priority_chart(vulnerabilities, priority_chart_path)
         document.add_picture(priority_chart_path, width=Inches(6))
@@ -854,8 +854,8 @@ def generate_report():
         document.add_page_break()
 
         # Generate and insert complexity density chart
-        add_colored_heading(document, 'Remediation Complexity', level=1)
-        paragraph = document.add_paragraph("The chart illustrates the density of vulnerabilities categorized by their remediation complexity levels: critical, high, medium, and low. The height of each bar indicates the number of vulnerabilities within each complexity level. This analysis helps in understanding the distribution of vulnerabilities based on the effort required for remediation, enabling better planning and allocation of resources for effective vulnerability management.")
+        add_colored_heading(document, 'COMPLEJIDAD DE REMEDIACION', level=1)
+        paragraph = document.add_paragraph("El grafico ilustra la densidad de vulnerabilidades categorizadas por su nivel de complejidad de remediacion: critico, alto, medio y bajo. La altura de cada barra indica el numero de vulnerabilidades en cada nivel de complejidad. Este analisis ayuda a comprender la distribucion de vulnerabilidades segun el esfuerzo requerido para su remediacion, permitiendo una mejor planificacion y asignacion de recursos.")
         complexity_chart_path = os.path.join(reports_dir, 'complexity_density_chart.png')
         generate_complexity_chart(vulnerabilities, complexity_chart_path)
         document.add_picture(complexity_chart_path, width=Inches(6))
@@ -866,9 +866,9 @@ def generate_report():
         document.add_page_break()
 
         for vulnerability in vulnerabilities:
-            add_colored_heading(document, f"Vulnerability: {vulnerability['name']}", level=1)
+            add_colored_heading(document, f"Vulnerabilidad: {vulnerability['name']}", level=1)
 
-            headers = ['Risk', 'Priority', 'Remediation Complexity', 'Affected Service', 'Affected Assets']
+            headers = ['Riesgo', 'Prioridad', 'Complejidad de Remed.', 'Servicio Afectado', 'Activos Afectados']
             data = [
                 vulnerability['risk'],
                 vulnerability['priority'],
@@ -878,33 +878,37 @@ def generate_report():
             ]
             add_table_with_headers(document, headers, data)
 
-            add_colored_heading(document, 'Description', level=2)
+            add_colored_heading(document, 'Descripcion', level=2)
             safe_desc = sanitize_for_prompt(vulnerability['description'])
-            technical_description_prompt = f"[TASK] Improve the readability of the following vulnerability description, expand general technical details and highlight the most relevant information. [TEXT] {safe_desc} [/TEXT] [INSTRUCTION] Output only paragraphs, no titles or subtitles. [/TASK]"
+            technical_description_prompt = f"Mejora la legibilidad de la siguiente descripcion de vulnerabilidad, expande los detalles tecnicos generales y resalta la informacion mas relevante. [TEXTO] {safe_desc} [/TEXTO] [INSTRUCCION] Solo parrafos, sin titulos ni subtitulos. Responde en el mismo idioma que el texto de entrada."
             technical_description = ask_IA(technical_description_prompt)
             add_formatted_paragraph(document, technical_description)
 
-            add_colored_heading(document, 'Impact', level=2)
+            add_colored_heading(document, 'Impacto', level=2)
             safe_impact = sanitize_for_prompt(vulnerability['impact'])
-            technical_impact_prompt = f"[TASK] Improve the readability of the following vulnerability impact description, expand general technical details and highlight the most relevant information. [TEXT] {safe_impact} [/TEXT] [INSTRUCTION] Output only paragraphs, no titles or subtitles. [/TASK]"
+            technical_impact_prompt = f"Mejora la legibilidad de la siguiente descripcion de impacto de vulnerabilidad, expande los detalles tecnicos generales y resalta la informacion mas relevante. [TEXTO] {safe_impact} [/TEXTO] [INSTRUCCION] Solo parrafos, sin titulos ni subtitulos. Responde en el mismo idioma que el texto de entrada."
             technical_impact = ask_IA(technical_impact_prompt)
             add_formatted_paragraph(document, technical_impact)
 
-            add_colored_heading(document, 'Recommendations', level=2)
+            add_colored_heading(document, 'Recomendaciones', level=2)
             safe_recs = sanitize_for_prompt(vulnerability['recommendations'])
-            technical_recommendations_prompt = f"[TASK] Improve the readability of the following vulnerability recommendations and create lists of punctual actions. [TEXT] {safe_recs} [/TEXT] [INSTRUCTION] Output only paragraphs and lists, no titles or subtitles. [/TASK]"
+            technical_recommendations_prompt = f"Mejora la legibilidad de las siguientes recomendaciones de vulnerabilidad y crea listas de acciones puntuales. [TEXTO] {safe_recs} [/TEXTO] [INSTRUCCION] Solo parrafos y listas, sin titulos ni subtitulos. Responde en el mismo idioma que el texto de entrada."
             technical_recommendations = ask_IA(technical_recommendations_prompt)
             add_formatted_paragraph(document, technical_recommendations)
 
-            add_colored_heading(document, 'References', level=2)
+            add_colored_heading(document, 'Referencias', level=2)
             safe_refs = sanitize_for_prompt(vulnerability.get('references', ''))
-            technical_references_prompt = f"[TASK] Create a list of reference links. [REFERENCES] {safe_refs} [/REFERENCES] [INSTRUCTION] Output only links, no additional text. [/TASK]"
-            technical_references = ask_IA(technical_references_prompt)
-            add_formatted_paragraph(document, technical_references)
+            if safe_refs and safe_refs.strip():
+                technical_references_prompt = f"Crea una lista de enlaces de referencia basados en la siguiente informacion. [REFERENCIAS] {safe_refs} [/REFERENCIAS] [INSTRUCCION] Solo enlaces, sin texto adicional. Responde en el mismo idioma que el texto de entrada."
+                technical_references = ask_IA(technical_references_prompt)
+                add_formatted_paragraph(document, technical_references)
+            else:
+                paragraph = document.add_paragraph("No se proporcionaron referencias externas para esta vulnerabilidad.")
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             document.add_page_break()
 
         # Add footer with NVIDIA logo
-        add_colored_heading(document, 'ABOUT THIS PROYECT', level=2)
+        add_colored_heading(document, 'ACERCA DE ESTE PROYECTO', level=2)
         document.add_picture('static/END.png', width=Inches(6))
         paragraph = document.add_paragraph("The RGS (Report Generative Security Tool) project has been developed for the Generative AI Agents Developer Contest organized by NVIDIA and LangChain. This project is created by Miguel Zabala (Nullsector), leverages open source software, built from scratch, to streamline the generation of comprehensive security audit reports. RGS harnesses the power of generative AI to provide detailed analyses and actionable recommendations for security vulnerabilities. The goal is to make it easier for users to produce professional-grade security reports with minimal effort. The RGS project encourages anyone to use the code for their personal projects and contribute to its improvement.")
         paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
@@ -1309,7 +1313,7 @@ def ask_IA_in_documents(question):
         return "No relevant content found in reports."
 
     # Query the LLM with the combined text
-    prompt = f"Based on the following report excerpts, answer the question concisely.\n\n{combined_text}\n\nQuestion: {question}\nAnswer:"
+    prompt = f"Basado en los siguientes extractos de informes, responde la pregunta de manera concisa.\n\n{combined_text}\n\nPregunta: {question}\nRespuesta:"
     response = ask_IA(prompt)
     
     # Buscar el report_id para cada fuente y generar el enlace de descarga correcto
