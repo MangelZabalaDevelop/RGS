@@ -230,3 +230,53 @@ This project is open-source and licensed for the Generative AI Agents Developer 
 Developed by Miguel Zabala (Nullsector) for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). RGS leverages open-source software to make it easier to produce professional-grade security reports with minimal effort.
 
 
+---
+
+## Últimos Cambios
+
+### 2026-06-16 — Hardening de seguridad y actualización de dependencias
+
+Se realizó una auditoría de seguridad completa y se aplicaron las siguientes mejoras:
+
+#### Seguridad
+- **Autenticación**: Implementado Flask-Login con bcrypt para proteger todos los endpoints
+- **Protección CSRF**: Decorador `@csrf_protect` aplicado a todos los endpoints POST, tokens CSRF integrados en el frontend
+- **XSS**: Eliminado todo uso de `innerHTML`, reemplazado por `createElement`/`textContent`
+- **Rate Limiting**: Todos los endpoints protegidos contra abuso
+- **Path Traversal**: Validación de rutas con `os.path.realpath()`
+- **Inyección de Prompts**: Sanitización de entradas antes de enviar al LLM
+- **Headers de Seguridad**: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+- **Audit Trail**: Tabla `audit_log` con registro de acciones (usuario, IP, timestamp)
+- **Modo Debug**: Controlado por variable de entorno, desactivado por defecto
+
+#### Dependencias
+- **Limpiadas**: Eliminadas ~55 dependencias del stack ML (LangChain, FAISS, transformers, torch, etc.) que ya no se utilizan tras simplificar el RAG a keyword-based
+- **Actualizadas**: Flask 3.1.3, Werkzeug 3.1.8, requests 2.34.2, bcrypt 5.0.0, Pillow 12.2.0, numpy 2.4.6, y todas las demás dependencias a sus últimas versiones
+- **Dependabot**: Alertas reducidas de 96 a 0
+
+#### Calidad del Reporte
+- **Idioma**: Todos los prompts de generación de reportes traducidos a español para mantener consistencia con los datos de entrada
+- **Secciones**: Traducidos los headings (INTRODUCCIÓN, RESUMEN EJECUTIVO, RESUMEN TÉCNICO, etc.) y headers de tablas (Riesgo, Prioridad, etc.)
+- **Referencias**: Manejo adecuado cuando no se proporcionan referencias externas
+- **LLM**: Integración con modelos razonadores vía API compatible OpenAI (vLLM/Ollama)
+
+#### Infraestructura
+- **Docker**: Imagen multi-stage con usuario no-root y filesystem de solo lectura
+- **CI/CD**: GitHub Actions con Bandit (SAST), pip-audit, gitleaks y verificación de archivos sensibles
+- **Dependabot**: Configurado para actualizaciones semanales de pip y GitHub Actions
+
+#### Commits
+```
+3467cca fix: mejorar calidad del reporte - prompts en español y consistencia de idioma
+bfdb1ff fix: corregir Security Scan workflow - gitleaks action y actualizar actions
+dc02517 fix: actualizar fonttools a 4.63.0 para corregir CVE de path traversal
+b14f25c chore: forzar re-escaneo de Dependabot tras actualizar dependencias
+55d9f52 fix: actualizar dependencias y eliminar stack ML no utilizado
+5de02b3 fix: aplicar protección CSRF a endpoints POST y frontend
+83c3053 security: LLM integration, CSP fix, Playwright test suite (30/30 passing)
+009fbc6 security: final fixes - audit trail, broken endpoint, CSRF tokens
+2f361d1 security: infrastructure hardening - Phase 3
+0a28ba6 security: comprehensive hardening - Phase 1 & 2
+81d64fa security: implement authentication and authorization system
+```
+
