@@ -7,7 +7,7 @@
 
 ## ABOUT
 
-The **Report Generative Security Tool (RGS)** is an innovative project developed with love by [Miguel Zabala](https://www.linkedin.com/in/miguelzabalap/) for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). This project leverages advanced technologies such as TensorRT-LLM via API [ChatRTX](https://github.com/NVIDIA/ChatRTX) using Mistral 7B model to automate and optimize the generation of comprehensive security audit reports.
+The **Report Generative Security Tool (RGS)** is an innovative project developed with love by [Miguel Zabala](https://www.linkedin.com/in/miguelzabalap/) for the [Generative AI Agents Developer Contest organized by NVIDIA and LangChain](https://www.nvidia.com/en-us/ai-data-science/generative-ai/developer-contest-with-langchain/). This project leverages Large Language Models (LLMs) via OpenAI-compatible API to automate and optimize the generation of comprehensive security audit reports.
 
 Contest video: [Youtube](https://youtu.be/ED45kjvfaSQ?si=5_bE4Pv1JhcnmYT6)
 
@@ -16,7 +16,7 @@ Contest video: [Youtube](https://youtu.be/ED45kjvfaSQ?si=5_bE4Pv1JhcnmYT6)
 [![Flask](https://img.shields.io/badge/Flask-1.1.2-red.svg)](https://flask.palletsprojects.com/en/1.1.x/)
 ![NVIDIA RTX](https://img.shields.io/badge/NVIDIA-RTX-green.svg)
 ![LangChain](https://img.shields.io/badge/LangChain-yellow.svg)
-![Mistral 7B](https://img.shields.io/badge/Mistral-blue.svg)
+![LLM](https://img.shields.io/badge/LLM-OpenAI%20Compatible-blue.svg)
 <div align="center">
    <a href="https://www.youtube.com/watch?v=ED45kjvfaSQ">
       <img src="./static/portada2.png" alt="RGS Logo" width="700" />
@@ -28,7 +28,7 @@ Contest video: [Youtube](https://youtu.be/ED45kjvfaSQ?si=5_bE4Pv1JhcnmYT6)
 
 In the rapidly evolving field of cybersecurity, generating vulnerability reports is a critical yet time-consuming task. Consultants often spend hours documenting vulnerabilities, which reduces the time available for identifying and addressing new threats. This inefficiency hampers productivity and risks the quality and consistency of the reports.
 
-Introducing the **Report Generative Security Tool (RGS)**, a groundbreaking application that revolutionizes vulnerability reporting by leveraging the power of NVIDIA's GeForce RTX 3xxx and RTX 4xxx series GPUs. This solution uses [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/) to optimize inference, delivering highly accurate and detailed reports in record time.
+Introducing the **Report Generative Security Tool (RGS)**, a groundbreaking application that revolutionizes vulnerability reporting by leveraging the power of Large Language Models (LLMs) to deliver highly accurate and detailed reports in record time.
 
 ![RGS Tool in Action](./static/RGS1.gif)
 
@@ -48,7 +48,7 @@ RGS is not just a technological advancement; it's a real-world solution that str
 
 ## FEATURES
 
-- **Generative AI Integration**: Leverages [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/) via API [ChatRTX](https://github.com/NVIDIA/ChatRTX) and the Mistral 7B model to generate comprehensive vulnerability reports.
+- **Generative AI Integration**: Leverages any OpenAI-compatible LLM (vLLM, Ollama, etc.) to generate comprehensive vulnerability reports.
 - **Risk, Priority, and Complexity Analysis**: Visual charts to illustrate vulnerability distributions.
 - **Automatic Report Generation**: Easily create professional-grade security audit reports.
 - **Database Management**: Efficiently manage vulnerabilities and reports with SQLite.
@@ -139,8 +139,12 @@ To get started with RGS, follow these steps:
     pip install -r requirements.txt
     ```
     
-4. **Setup Chat With RTX**:
-    Follow the instructions on the [Chat With RTX GitHub repository](https://github.com/NVIDIA/ChatRTX) to set up TensorRT-LLM and the Chat With RTX application.
+4. **Configure your LLM**:
+    Edit `.env` and set your LLM endpoint:
+    ```bash
+    LLM_BASE_URL=http://your-llm-server:port/v1
+    LLM_MODEL=your-model-name
+    ```
 
 
 ## USAGE
@@ -190,7 +194,7 @@ Before running the application, configure environment variables:
     - `SECRET_KEY`: Generate a random key (e.g., `python -c "import secrets; print(secrets.token_hex(32))"`)
     - `ADMIN_USERNAME`: Your admin username
     - `ADMIN_PASSWORD`: Your admin password (will be hashed with bcrypt)
-    - `CHATRTX_*`: Paths to your ChatRTX certificates
+    - `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`: Your LLM endpoint configuration
 
 ### Security Features
 

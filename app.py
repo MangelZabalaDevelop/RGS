@@ -37,16 +37,10 @@ logger = logging.getLogger('rgs.security')
 # Load environment variables from .env file if present
 dotenv.load_dotenv()
 
-## LLM CONFIGURATION — OpenAI-compatible API (vLLM / Ollama / ChatRTX)
+## LLM CONFIGURATION — OpenAI-compatible API (vLLM / Ollama)
 LLM_BASE_URL = os.getenv('LLM_BASE_URL', 'http://192.168.0.13:9494/v1')
 LLM_MODEL = os.getenv('LLM_MODEL', 'Qwen3.6-35B-A3B')
 LLM_API_KEY = os.getenv('LLM_API_KEY', 'not-needed')
-
-# Keep ChatRTX paths for backward compatibility (unused when LLM_BASE_URL is set)
-appdata_folder = os.path.dirname(os.getenv('APPDATA', '')).replace('\\', '/')
-cert_path = os.getenv('CHATRTX_CERT_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/servercert.pem")
-key_path = os.getenv('CHATRTX_KEY_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/RAG/trt-llm-rag-windows-ChatRTX_0.3/certs/serverkey.pem")
-ca_bundle = os.getenv('CHATRTX_CA_PATH') or (appdata_folder + "/Local/NVIDIA/ChatRTX/env_nvd_rag/Library/ssl/cacert.pem")
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
