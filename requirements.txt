@@ -46,4 +46,4 @@ python-dotenv==1.2.2
 colorama==0.4.6
 
 # Production WSGI server
-gunicorn==23.0.0
+gunicorn==26.0.0
