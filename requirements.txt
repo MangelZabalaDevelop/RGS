@@ -29,7 +29,7 @@ lxml==6.1.1
 # Charts & data
 matplotlib==3.11.0
 Pillow==12.2.0
-numpy==2.4.6
+numpy==2.5.0
 contourpy==1.3.2
 cycler==0.12.1
 fonttools==4.63.0
