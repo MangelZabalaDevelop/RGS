@@ -18,7 +18,7 @@ bcrypt==5.0.0
 # HTTP client
 requests==2.34.2
 urllib3==2.7.0
-certifi==2026.5.20
+certifi==2026.6.17
 charset-normalizer==3.4.7
 idna==3.18
 
