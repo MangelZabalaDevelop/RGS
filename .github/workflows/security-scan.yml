@@ -40,7 +40,7 @@ jobs:
           pip-audit -r requirements.txt || true
 
       - name: Check for committed secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
